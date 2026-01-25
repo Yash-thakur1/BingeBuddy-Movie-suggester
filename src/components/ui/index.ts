@@ -10,3 +10,34 @@ export {
   MovieDetailsSkeleton,
   SearchResultSkeleton,
 } from './Skeleton';
+
+// Error Handling
+export {
+  ErrorBoundary,
+  ErrorFallback,
+  OfflineFallback,
+  APIErrorFallback,
+  EmptyStateFallback,
+} from './ErrorBoundary';
+
+// Network Status
+export {
+  NetworkStatusBanner,
+  FreshnessIndicator,
+  SmartLoading,
+} from './NetworkStatus';
+
+// Animations
+export {
+  PageTransition,
+  FadeIn,
+  StaggerChildren,
+  StaggerItem,
+  ScaleOnHover,
+  SlideIn,
+  Pulse,
+  ShimmerEffect,
+  scrollToElement,
+  scrollToTop,
+} from './Animations';
+

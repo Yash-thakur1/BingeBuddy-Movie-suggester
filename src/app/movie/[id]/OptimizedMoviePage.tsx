@@ -13,7 +13,15 @@ import {
   updateMovieCache, 
   CachedMovieData 
 } from '@/lib/movieCache';
-import { RatingBadge, Badge, Skeleton } from '@/components/ui';
+import { useNetworkStore } from '@/lib/network';
+import { 
+  RatingBadge, 
+  Badge, 
+  Skeleton, 
+  FreshnessIndicator, 
+  ErrorFallback,
+  FadeIn 
+} from '@/components/ui';
 import { MovieDetailsActions } from './MovieDetailsActions';
 import { cn } from '@/lib/utils';
 import { MovieDetails, Credits, Cast, Crew, WatchProviderCountry } from '@/types/movie';
@@ -26,21 +34,27 @@ interface EssentialContentProps {
   details: MovieDetails;
   director?: Crew;
   trailer?: string | null;
+  cacheTimestamp?: number | null;
 }
 
-function EssentialContent({ details, director, trailer }: EssentialContentProps) {
+function EssentialContent({ details, director, trailer, cacheTimestamp }: EssentialContentProps) {
+  const { isSlowConnection } = useNetworkStore();
+  
+  // Use lower quality images on slow connections
+  const backdropSize = isSlowConnection ? 'w780' : 'w1280';
+  
   return (
     <>
       {/* Hero Backdrop */}
       <div className="relative h-[50vh] min-h-[400px] w-full overflow-hidden">
         <Image
-          src={getImageUrl(details.backdrop_path, 'w1280')}
+          src={getImageUrl(details.backdrop_path, backdropSize)}
           alt={details.title}
           fill
-          className="object-cover"
+          className="object-cover animate-fade-in-up"
           priority
           sizes="100vw"
-          quality={75}
+          quality={isSlowConnection ? 60 : 75}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-dark-950 via-dark-950/50 to-dark-950/30" />
         <div className="absolute inset-0 bg-gradient-to-r from-dark-950 via-transparent to-transparent" />
@@ -50,8 +64,8 @@ function EssentialContent({ details, director, trailer }: EssentialContentProps)
       <div className="relative -mt-64 container mx-auto px-4 md:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Poster */}
-          <div className="shrink-0">
-            <div className="relative w-64 h-96 rounded-xl overflow-hidden shadow-2xl mx-auto lg:mx-0">
+          <FadeIn delay={0.1} className="shrink-0">
+            <div className="relative w-64 h-96 rounded-xl overflow-hidden shadow-2xl mx-auto lg:mx-0 hover-lift">
               <Image
                 src={getImageUrl(details.poster_path, 'w500')}
                 alt={details.title}
@@ -62,10 +76,18 @@ function EssentialContent({ details, director, trailer }: EssentialContentProps)
                 quality={85}
               />
             </div>
-          </div>
+          </FadeIn>
 
           {/* Info */}
-          <div className="flex-1">
+          <FadeIn delay={0.2} className="flex-1">
+            {/* Freshness Indicator */}
+            {cacheTimestamp && (
+              <FreshnessIndicator 
+                timestamp={cacheTimestamp} 
+                className="mb-2"
+              />
+            )}
+            
             {/* Title */}
             <h1 className="text-3xl md:text-5xl font-display font-bold text-white mb-2">
               {details.title}
@@ -129,7 +151,7 @@ function EssentialContent({ details, director, trailer }: EssentialContentProps)
               }}
               trailerKey={trailer ?? null}
             />
-          </div>
+          </FadeIn>
         </div>
       </div>
     </>
@@ -150,13 +172,13 @@ const MovieCarousel = lazy(() => import('@/components/movies/MovieCarousel').the
 // Skeleton for deferred content
 function DeferredSkeleton() {
   return (
-    <div className="animate-pulse space-y-6 py-6">
-      <div className="h-8 w-48 bg-dark-800 rounded" />
+    <div className="space-y-6 py-6">
+      <div className="h-8 w-48 bg-dark-800 skeleton-shimmer rounded" />
       <div className="flex gap-4 overflow-hidden">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="shrink-0">
-            <div className="w-24 h-24 bg-dark-800 rounded-full" />
-            <div className="h-4 w-20 bg-dark-800 rounded mt-2 mx-auto" />
+            <div className="w-24 h-24 bg-dark-800 skeleton-shimmer rounded-full" />
+            <div className="h-4 w-20 bg-dark-800 skeleton-shimmer rounded mt-2 mx-auto" />
           </div>
         ))}
       </div>
@@ -174,6 +196,10 @@ interface DeferredContentProps {
 
 function DeferredContent({ movieId, credits, trailer, providers, movieTitle }: DeferredContentProps) {
   const [isLoaded, setIsLoaded] = useState(false);
+  const { isOffline, isSlowConnection } = useNetworkStore();
+  
+  // Don't show heavy content (trailer) on slow connections or offline
+  const canShowTrailer = !isOffline && !isSlowConnection;
 
   useEffect(() => {
     // Small delay to ensure essential content renders first
@@ -191,33 +217,57 @@ function DeferredContent({ movieId, credits, trailer, providers, movieTitle }: D
     <div className="container mx-auto px-4 md:px-8 pb-16">
       {/* Where to Watch */}
       {providers && (
-        <Suspense fallback={<DeferredSkeleton />}>
-          <WatchProvidersSection providers={providers} movieTitle={movieTitle} />
-        </Suspense>
+        <FadeIn delay={0.1}>
+          <Suspense fallback={<DeferredSkeleton />}>
+            <WatchProvidersSection providers={providers} movieTitle={movieTitle} />
+          </Suspense>
+        </FadeIn>
       )}
 
-      {/* Trailer */}
-      {trailer && (
-        <section className="mt-12">
-          <h2 className="text-2xl font-bold text-white mb-4">🎬 Trailer</h2>
-          <Suspense fallback={<div className="aspect-video max-w-4xl bg-dark-800 rounded-xl animate-pulse" />}>
-            <TrailerPlayer videoKey={trailer} title={movieTitle} className="max-w-4xl" />
-          </Suspense>
-        </section>
+      {/* Trailer - Only show on good connections */}
+      {trailer && canShowTrailer && (
+        <FadeIn delay={0.2}>
+          <section className="mt-12">
+            <h2 className="text-2xl font-bold text-white mb-4">🎬 Trailer</h2>
+            <Suspense fallback={<div className="aspect-video max-w-4xl bg-dark-800 rounded-xl skeleton-shimmer" />}>
+              <TrailerPlayer videoKey={trailer} title={movieTitle} className="max-w-4xl" />
+            </Suspense>
+          </section>
+        </FadeIn>
+      )}
+      
+      {/* Trailer unavailable message on slow connections */}
+      {trailer && !canShowTrailer && (
+        <FadeIn delay={0.2}>
+          <section className="mt-12">
+            <div className="max-w-4xl bg-dark-800/50 border border-dark-700 rounded-xl p-6">
+              <p className="text-gray-400 text-center">
+                {isOffline 
+                  ? '📴 Trailer unavailable while offline' 
+                  : '🐢 Trailer disabled on slow connection to save data'
+                }
+              </p>
+            </div>
+          </section>
+        </FadeIn>
       )}
 
       {/* Cast */}
       {credits && credits.cast.length > 0 && (
-        <Suspense fallback={<DeferredSkeleton />}>
-          <CastSection cast={credits.cast} />
-        </Suspense>
+        <FadeIn delay={0.3}>
+          <Suspense fallback={<DeferredSkeleton />}>
+            <CastSection cast={credits.cast} />
+          </Suspense>
+        </FadeIn>
       )}
 
       {/* Crew */}
       {credits && credits.crew.length > 0 && (
-        <Suspense fallback={<DeferredSkeleton />}>
-          <CrewSection crew={credits.crew} />
-        </Suspense>
+        <FadeIn delay={0.4}>
+          <Suspense fallback={<DeferredSkeleton />}>
+            <CrewSection crew={credits.crew} />
+          </Suspense>
+        </FadeIn>
       )}
     </div>
   );
@@ -357,11 +407,14 @@ export function OptimizedMoviePage({
   const [providers, setProviders] = useState<WatchProviderCountry | null>(initialProviders || null);
   const [isLoading, setIsLoading] = useState(!initialDetails);
   const [error, setError] = useState<string | null>(null);
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
 
   // Cache initial data on mount
   useEffect(() => {
     if (initialDetails) {
       updateMovieCache(movieId, { details: initialDetails });
+      // Fresh data from server
+      setCacheTimestamp(Date.now());
     }
     if (initialCredits) {
       updateMovieCache(movieId, { credits: initialCredits });
@@ -374,6 +427,11 @@ export function OptimizedMoviePage({
 
     const loadFromCacheOrFetch = async () => {
       const cached = getMovieCache(movieId);
+      
+      // Get cache timestamp for freshness indicator
+      if (cached.timestamp) {
+        setCacheTimestamp(cached.timestamp);
+      }
 
       // Use cached data immediately
       if (cached.data?.details) {
@@ -448,11 +506,12 @@ export function OptimizedMoviePage({
 
   if (error || !details) {
     return (
-      <div className="min-h-screen bg-dark-950 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-2">Error</h1>
-          <p className="text-gray-400">{error || 'Movie not found'}</p>
-        </div>
+      <div className="min-h-screen bg-dark-950 flex items-center justify-center px-4">
+        <ErrorFallback
+          title="Movie Not Found"
+          description={error || 'We couldn\'t find the movie you\'re looking for.'}
+          onRetry={() => window.location.reload()}
+        />
       </div>
     );
   }
@@ -464,6 +523,7 @@ export function OptimizedMoviePage({
         details={details} 
         director={director} 
         trailer={trailer}
+        cacheTimestamp={cacheTimestamp}
       />
 
       {/* Phase 2: Deferred content loads progressively */}
@@ -484,30 +544,30 @@ export function OptimizedMoviePage({
 // Loading skeleton for initial load
 function MovieDetailsLoadingSkeleton() {
   return (
-    <div className="min-h-screen bg-dark-950 animate-pulse">
+    <div className="min-h-screen bg-dark-950">
       {/* Hero skeleton */}
-      <div className="h-[50vh] min-h-[400px] bg-dark-900" />
+      <div className="h-[50vh] min-h-[400px] bg-dark-900 skeleton-shimmer" />
       
       <div className="relative -mt-64 container mx-auto px-4 md:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Poster skeleton */}
           <div className="shrink-0">
-            <div className="w-64 h-96 rounded-xl bg-dark-800 mx-auto lg:mx-0" />
+            <div className="w-64 h-96 rounded-xl bg-dark-800 skeleton-shimmer mx-auto lg:mx-0" />
           </div>
           
           {/* Info skeleton */}
           <div className="flex-1 space-y-4">
-            <div className="h-12 w-3/4 bg-dark-800 rounded" />
-            <div className="h-6 w-1/2 bg-dark-800 rounded" />
+            <div className="h-12 w-3/4 bg-dark-800 skeleton-shimmer rounded" />
+            <div className="h-6 w-1/2 bg-dark-800 skeleton-shimmer rounded" />
             <div className="flex gap-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-8 w-20 bg-dark-800 rounded-full" />
+                <div key={i} className="h-8 w-20 bg-dark-800 skeleton-shimmer rounded-full" />
               ))}
             </div>
             <div className="space-y-2">
-              <div className="h-4 w-full bg-dark-800 rounded" />
-              <div className="h-4 w-full bg-dark-800 rounded" />
-              <div className="h-4 w-2/3 bg-dark-800 rounded" />
+              <div className="h-4 w-full bg-dark-800 skeleton-shimmer rounded" />
+              <div className="h-4 w-full bg-dark-800 skeleton-shimmer rounded" />
+              <div className="h-4 w-2/3 bg-dark-800 skeleton-shimmer rounded" />
             </div>
           </div>
         </div>

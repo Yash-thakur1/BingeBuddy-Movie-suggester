@@ -137,6 +137,7 @@ function saveToCache(movieId: number, data: Partial<CachedMovieData>, merge = tr
 export function getMovieCache(movieId: number): {
   data: Partial<CachedMovieData> | null;
   isStale: boolean;
+  timestamp: number | null;
   hasDetails: boolean;
   hasCredits: boolean;
   hasVideos: boolean;
@@ -146,10 +147,12 @@ export function getMovieCache(movieId: number): {
 } {
   // Try memory first, then storage
   const memoryData = getFromMemory(movieId);
-  if (memoryData) {
+  const memoryEntry = memoryCache.get(movieId);
+  if (memoryData && memoryEntry) {
     return {
       data: memoryData,
       isStale: false, // Memory cache is always fresh
+      timestamp: memoryEntry.timestamp,
       hasDetails: !!memoryData.details,
       hasCredits: !!memoryData.credits,
       hasVideos: !!memoryData.videos,
@@ -160,10 +163,12 @@ export function getMovieCache(movieId: number): {
   }
   
   const storageResult = getFromStorage(movieId);
+  const storageEntry = memoryCache.get(movieId); // getFromStorage populates memoryCache
   if (storageResult) {
     return {
       data: storageResult.data,
       isStale: storageResult.isStale,
+      timestamp: storageEntry?.timestamp ?? null,
       hasDetails: !!storageResult.data.details,
       hasCredits: !!storageResult.data.credits,
       hasVideos: !!storageResult.data.videos,
@@ -176,6 +181,7 @@ export function getMovieCache(movieId: number): {
   return {
     data: null,
     isStale: true,
+    timestamp: null,
     hasDetails: false,
     hasCredits: false,
     hasVideos: false,

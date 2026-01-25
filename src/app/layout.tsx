@@ -4,6 +4,8 @@ import { Header, Footer } from '@/components/layout';
 import { TrailerModal } from '@/components/movies';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { WatchlistSyncProvider } from '@/components/providers/WatchlistSyncProvider';
+import { PerformanceProvider } from '@/components/providers/PerformanceProvider';
+import { NetworkStatusBanner } from '@/components/ui';
 import './globals.css';
 
 const inter = Inter({
@@ -80,21 +82,26 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable} dark`}>
       <body className="min-h-screen bg-dark-950">
-        <AuthProvider>
-          <WatchlistSyncProvider>
-            {/* Header */}
-            <Header />
+        <PerformanceProvider>
+          <AuthProvider>
+            <WatchlistSyncProvider>
+              {/* Network Status Banner */}
+              <NetworkStatusBanner />
+              
+              {/* Header */}
+              <Header />
 
-            {/* Main content */}
-            <main className="min-h-screen pt-16 md:pt-20">{children}</main>
+              {/* Main content */}
+              <main className="min-h-screen pt-16 md:pt-20">{children}</main>
 
-            {/* Footer */}
-            <Footer />
+              {/* Footer */}
+              <Footer />
 
-            {/* Global modals */}
-            <TrailerModal />
-          </WatchlistSyncProvider>
-        </AuthProvider>
+              {/* Global modals */}
+              <TrailerModal />
+            </WatchlistSyncProvider>
+          </AuthProvider>
+        </PerformanceProvider>
       </body>
     </html>
   );

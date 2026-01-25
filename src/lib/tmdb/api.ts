@@ -1,6 +1,7 @@
 /**
  * TMDB API Client
  * Handles all API requests to The Movie Database
+ * Includes performance tracking and robust error handling
  */
 
 import {
@@ -28,11 +29,39 @@ interface FetchOptions {
   next?: { revalidate?: number; tags?: string[] };
 }
 
+// API Error types for better error handling
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public statusCode?: number,
+    public endpoint?: string,
+    public isNetworkError: boolean = false
+  ) {
+    super(message);
+    this.name = 'APIError';
+  }
+}
+
 /**
  * Sleep utility for retry delays
  */
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Track API call timing (only in browser)
+ */
+function trackAPITiming(endpoint: string, duration: number, success: boolean): void {
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    const color = success 
+      ? (duration < 500 ? '#22c55e' : duration < 1000 ? '#eab308' : '#ef4444')
+      : '#ef4444';
+    console.log(
+      `%c🌐 [API] ${endpoint}: ${duration.toFixed(0)}ms ${success ? '✓' : '✗'}`,
+      `color: ${color}; font-weight: bold;`
+    );
+  }
 }
 
 /**
@@ -44,9 +73,15 @@ async function tmdbFetch<T>(
   options: FetchOptions = {},
   retries: number = 3
 ): Promise<T> {
+  const startTime = Date.now();
+  
   // Check if API key is configured
   if (!TMDB_API_KEY) {
-    throw new Error('TMDB API key is not configured. Please add NEXT_PUBLIC_TMDB_API_KEY to your .env.local file.');
+    throw new APIError(
+      'TMDB API key is not configured. Please add NEXT_PUBLIC_TMDB_API_KEY to your .env.local file.',
+      undefined,
+      endpoint
+    );
   }
 
   const url = new URL(`${TMDB_API_BASE}${endpoint}`);
@@ -97,13 +132,28 @@ async function tmdbFetch<T>(
       if (!response.ok) {
         const errorText = await response.text();
         console.error('TMDB API Error:', response.status, errorText);
-        throw new Error(`TMDB API Error: ${response.status} ${response.statusText}`);
+        throw new APIError(
+          `TMDB API Error: ${response.status} ${response.statusText}`,
+          response.status,
+          endpoint
+        );
       }
 
-      return response.json();
+      const data = await response.json();
+      
+      // Track successful API call
+      trackAPITiming(endpoint, Date.now() - startTime, true);
+      
+      return data;
     } catch (error) {
       lastError = error as Error;
-      console.error(`TMDB Fetch Attempt ${attempt}/${retries} failed:`, (error as Error).message);
+      const isNetwork = (error as Error).name === 'AbortError' || 
+        (error as Error).message.includes('fetch failed') ||
+        (error as Error).message.includes('network');
+      
+      if (isNetwork && process.env.NODE_ENV === 'development') {
+        console.warn(`TMDB Fetch Attempt ${attempt}/${retries} failed (network):`, (error as Error).message);
+      }
       
       if (attempt < retries) {
         // Wait before retrying (exponential backoff)
@@ -112,7 +162,19 @@ async function tmdbFetch<T>(
     }
   }
 
-  throw lastError || new Error('Failed to fetch from TMDB API');
+  // Track failed API call
+  trackAPITiming(endpoint, Date.now() - startTime, false);
+
+  if (lastError instanceof APIError) {
+    throw lastError;
+  }
+  
+  throw new APIError(
+    lastError?.message || 'Failed to fetch from TMDB API',
+    undefined,
+    endpoint,
+    true
+  );
 }
 
 // ============================================
