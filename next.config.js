@@ -18,6 +18,8 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
+  // Enable gzip compression
+  compress: true,
 };
 
 module.exports = nextConfig;

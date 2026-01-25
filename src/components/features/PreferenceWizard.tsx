@@ -60,8 +60,8 @@ export function PreferenceWizard({ onComplete, className }: PreferenceWizardProp
       // Add era (year range)
       if (preferences.era && ERA_PRESETS[preferences.era]) {
         const eraRange = ERA_PRESETS[preferences.era];
-        if (eraRange.start) params.set('year_gte', eraRange.start.toString());
-        if (eraRange.end) params.set('year_lte', eraRange.end.toString());
+        if (eraRange.from) params.set('year_gte', eraRange.from.toString());
+        if (eraRange.to) params.set('year_lte', eraRange.to.toString());
       }
       
       // Add language

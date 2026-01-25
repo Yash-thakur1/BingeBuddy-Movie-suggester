@@ -2,13 +2,12 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { Bookmark, BookmarkCheck, Play } from 'lucide-react';
 import { Movie } from '@/types/movie';
 import { getImageUrl, getYear, getGenreName } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge, Badge } from '@/components/ui';
-import { useWatchlistStore, useUIStore } from '@/store';
+import { useWatchlistStore } from '@/store';
 
 /**
  * Movie Card Component
@@ -50,12 +49,7 @@ export function MovieCard({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="group relative"
-    >
+    <div className="group relative">
       <Link href={`/movie/${movie.id}`} className="block">
         <div
           className={cn(
@@ -134,7 +128,7 @@ export function MovieCard({
           </div>
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }
 

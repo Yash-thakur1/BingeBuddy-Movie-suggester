@@ -12,6 +12,18 @@ export const revalidate = 3600; // Revalidate every hour
  * Main landing page with hero, quick moods, and movie sections
  */
 
+// Fetch all data in parallel for better performance
+async function fetchHomePageData() {
+  const [trendingDay, trendingWeek, popular, topRated] = await Promise.all([
+    getTrendingMovies('day'),
+    getTrendingMovies('week'),
+    getPopularMovies(),
+    getTopRatedMovies(),
+  ]);
+  
+  return { trendingDay, trendingWeek, popular, topRated };
+}
+
 async function HeroContent() {
   const trending = await getTrendingMovies('day');
   const featuredMovie = trending.results[0];
@@ -25,38 +37,31 @@ async function HeroContent() {
   return <HeroSection movie={featuredMovie} trailerKey={trailer?.key} />;
 }
 
-async function TrendingSection() {
-  const trending = await getTrendingMovies('week');
+async function MovieSections() {
+  const { trendingWeek, popular, topRated } = await fetchHomePageData();
+  
   return (
-    <MovieSection
-      title="🔥 Trending This Week"
-      description="Most popular movies right now"
-      movies={trending.results.slice(0, 12)}
-      viewAllHref="/discover?sort=popularity.desc"
-    />
-  );
-}
-
-async function PopularSection() {
-  const popular = await getPopularMovies();
-  return (
-    <MovieCarousel
-      title="⭐ Popular Movies"
-      description="Fan favorites everyone loves"
-      movies={popular.results}
-    />
-  );
-}
-
-async function TopRatedSection() {
-  const topRated = await getTopRatedMovies();
-  return (
-    <MovieSection
-      title="🏆 Top Rated"
-      description="Critically acclaimed masterpieces"
-      movies={topRated.results.slice(0, 12)}
-      viewAllHref="/discover?sort=vote_average.desc"
-    />
+    <>
+      <MovieSection
+        title="🔥 Trending This Week"
+        description="Most popular movies right now"
+        movies={trendingWeek.results.slice(0, 12)}
+        viewAllHref="/discover?sort=popularity.desc"
+      />
+      
+      <MovieCarousel
+        title="⭐ Popular Movies"
+        description="Fan favorites everyone loves"
+        movies={popular.results}
+      />
+      
+      <MovieSection
+        title="🏆 Top Rated"
+        description="Critically acclaimed masterpieces"
+        movies={topRated.results.slice(0, 12)}
+        viewAllHref="/discover?sort=vote_average.desc"
+      />
+    </>
   );
 }
 
@@ -73,19 +78,9 @@ export default function HomePage() {
         {/* Quick Mood Selection */}
         <QuickMoodsSection />
 
-        {/* Trending Movies */}
-        <Suspense fallback={<MovieGridSkeleton />}>
-          <TrendingSection />
-        </Suspense>
-
-        {/* Popular Movies Carousel */}
-        <Suspense fallback={<MovieGridSkeleton count={6} />}>
-          <PopularSection />
-        </Suspense>
-
-        {/* Top Rated Movies */}
-        <Suspense fallback={<MovieGridSkeleton />}>
-          <TopRatedSection />
+        {/* All Movie Sections - fetched in parallel */}
+        <Suspense fallback={<MovieGridSkeleton count={12} />}>
+          <MovieSections />
         </Suspense>
 
         {/* CTA Section */}
