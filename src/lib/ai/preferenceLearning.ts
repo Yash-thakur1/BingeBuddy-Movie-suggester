@@ -307,9 +307,25 @@ function debouncedServerSync(state: PreferenceLearningState): void {
 
 /**
  * Sync learning state to server for authenticated users
+ * Supports both API route (Prisma) and Firestore
  */
 async function syncToServer(state: PreferenceLearningState): Promise<void> {
   try {
+    // Try Firestore first if available
+    if (typeof window !== 'undefined') {
+      try {
+        const { saveUserLearningState, getCurrentUser } = await import('@/lib/firebase');
+        const user = getCurrentUser();
+        if (user) {
+          await saveUserLearningState(user.uid, state);
+          return;
+        }
+      } catch {
+        // Firestore not available, fall back to API
+      }
+    }
+    
+    // Fall back to API route
     const response = await fetch('/api/user/learning', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -331,11 +347,36 @@ async function syncToServer(state: PreferenceLearningState): Promise<void> {
 /**
  * Load learning state from server for authenticated users
  * Should be called on login to restore preferences
+ * Supports both Firestore and API route
  */
 export async function loadFromServer(): Promise<PreferenceLearningState | null> {
   if (!isAuthenticated()) return null;
   
   try {
+    // Try Firestore first if available
+    if (typeof window !== 'undefined') {
+      try {
+        const { getUserLearningState, getCurrentUser } = await import('@/lib/firebase');
+        const user = getCurrentUser();
+        if (user) {
+          const firestoreState = await getUserLearningState(user.uid);
+          if (firestoreState?.learningData) {
+            const state = firestoreState.learningData;
+            state.config = { ...DEFAULT_CONFIG, ...state.config };
+            
+            // Save to local storage for offline access
+            const storageKey = getStorageKey();
+            localStorage.setItem(storageKey, JSON.stringify(state));
+            
+            return state;
+          }
+        }
+      } catch {
+        // Firestore not available, fall back to API
+      }
+    }
+    
+    // Fall back to API route
     const response = await fetch('/api/user/learning');
     if (!response.ok) return null;
     
