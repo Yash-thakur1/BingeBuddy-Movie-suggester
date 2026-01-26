@@ -30,6 +30,17 @@ import {
   analyzeReferenceFromQuery,
   CulturalFilterRules
 } from './referenceMovieAnalyzer';
+import {
+  calculateConfidenceScore,
+  ConfidenceScore,
+  MatchContext
+} from './confidenceScoring';
+import {
+  loadLearningState,
+  extractAttributesFromMovie,
+  applyPersonalizedRanking,
+  MovieAttributes
+} from './preferenceLearning';
 import { 
   getTrendingMovies, 
   getTopRatedMovies, 
@@ -59,6 +70,13 @@ export interface MediaItem {
   releaseDate: string | null;
   voteAverage: number;
   genreIds: number[];
+  
+  // For preference learning
+  originalLanguage?: string;
+  popularity?: number;
+  
+  // Attributes for feedback (extracted when displaying)
+  attributes?: MovieAttributes;
 }
 
 export interface ChatMessage {
@@ -77,6 +95,11 @@ export interface ChatMessage {
     source?: string;
     isLoading?: boolean;
     error?: string;
+    // Reference movie for "similar to" queries
+    referenceMovieId?: number;
+    referenceMovieTitle?: string;
+    // Confidence information
+    confidence?: ConfidenceScore;
   };
 }
 
@@ -97,10 +120,10 @@ function generateMessageId(): string {
 }
 
 /**
- * Convert Movie to MediaItem
+ * Convert Movie to MediaItem with attributes for feedback learning
  */
-function movieToMediaItem(movie: Movie): MediaItem {
-  return {
+function movieToMediaItem(movie: Movie, includeAttributes: boolean = false): MediaItem {
+  const item: MediaItem = {
     id: movie.id,
     type: 'movie',
     title: movie.title,
@@ -109,15 +132,24 @@ function movieToMediaItem(movie: Movie): MediaItem {
     overview: movie.overview,
     releaseDate: movie.release_date,
     voteAverage: movie.vote_average,
-    genreIds: movie.genre_ids
+    genreIds: movie.genre_ids,
+    originalLanguage: movie.original_language,
+    popularity: movie.popularity
   };
+  
+  // Include attributes for feedback learning
+  if (includeAttributes) {
+    item.attributes = extractAttributesFromMovie(movie, 'movie');
+  }
+  
+  return item;
 }
 
 /**
- * Convert TVShow to MediaItem
+ * Convert TVShow to MediaItem with attributes for feedback learning
  */
-function tvShowToMediaItem(show: TVShow): MediaItem {
-  return {
+function tvShowToMediaItem(show: TVShow, includeAttributes: boolean = false): MediaItem {
+  const item: MediaItem = {
     id: show.id,
     type: 'tv',
     title: show.name,
@@ -126,8 +158,20 @@ function tvShowToMediaItem(show: TVShow): MediaItem {
     overview: show.overview,
     releaseDate: show.first_air_date || null,
     voteAverage: show.vote_average,
-    genreIds: show.genre_ids
+    genreIds: show.genre_ids,
+    originalLanguage: show.original_language,
+    popularity: show.popularity
   };
+  
+  // Include attributes for feedback learning
+  if (includeAttributes) {
+    item.attributes = extractAttributesFromMovie(
+      { ...show, title: show.name, release_date: show.first_air_date },
+      'tv'
+    );
+  }
+  
+  return item;
 }
 
 /**
@@ -210,11 +254,12 @@ async function executeQuery(query: MovieQuery): Promise<MediaItem[]> {
     // Return more results for diversity scoring
     const results = response.results.slice(0, fetchLimit);
     
+    // Include attributes for preference learning
     return results.map(item => {
       if ('title' in item) {
-        return movieToMediaItem(item as Movie);
+        return movieToMediaItem(item as Movie, true);
       }
-      return tvShowToMediaItem(item as TVShow);
+      return tvShowToMediaItem(item as TVShow, true);
     });
   } catch (error) {
     console.error('Query execution error:', error);
@@ -417,13 +462,28 @@ export async function processMessage(userMessage: string): Promise<ChatResponse>
   
   // Analyze reference movie for cultural context (e.g., "movies like Baahubali")
   let culturalFilters: CulturalFilterRules | undefined;
+  let referenceMovieId: number | undefined;
+  let referenceMovieTitle: string | undefined;
+  let matchConfidence: ConfidenceScore | undefined;
+  
   if (intent.hasReferenceMovie && intent.referenceTitle) {
     const refAnalysis = await analyzeReferenceFromQuery(userMessage);
     if (refAnalysis) {
       culturalFilters = refAnalysis.filters;
+      referenceMovieId = refAnalysis.info.id;
+      referenceMovieTitle = refAnalysis.info.title;
+      
       // Use analyzed genres from reference movie if user didn't specify any
       if (refAnalysis.info.genres.length > 0 && intent.genres.length === 0) {
         intent.genres = refAnalysis.info.genres.slice(0, 3); // Take top 3 genres
+      }
+      
+      // Note: Confidence is already returned from analyzeReferenceFromQuery
+      // The confidence field indicates match quality: exact, high, medium, low
+      if (refAnalysis.confidence === 'low') {
+        // Add a note about low confidence match
+        const confidenceNote = `I'm matching based on **${referenceMovieTitle}**. Let me know if you meant a different movie!`;
+        // This will be incorporated into the response
       }
     }
   }
@@ -432,7 +492,42 @@ export async function processMessage(userMessage: string): Promise<ChatResponse>
   const queryResult = generateQueries(intent, filterRules, culturalFilters);
   
   // Execute queries with diversity scoring
-  const { media, usedFallback } = await executeQueries(queryResult, intent, true);
+  let { media, usedFallback } = await executeQueries(queryResult, intent, true);
+  
+  // Apply personalized ranking if we have user feedback
+  if (media.length > 0 && referenceMovieId) {
+    const learningState = loadLearningState();
+    const totalFeedback = learningState.totalLikes + learningState.totalDislikes;
+    
+    if (totalFeedback >= learningState.config.minFeedbackThreshold) {
+      // Apply personalization - this re-ranks but keeps reference similarity primary
+      const personalized = applyPersonalizedRanking(
+        learningState,
+        media,
+        // Extract attributes from media item
+        (item) => item.attributes || extractAttributesFromMovie(
+          { 
+            id: item.id, 
+            title: item.title,
+            original_language: item.originalLanguage || 'en',
+            genre_ids: item.genreIds,
+            release_date: item.releaseDate || undefined,
+            vote_average: item.voteAverage,
+            popularity: item.popularity || 0
+          },
+          item.type
+        ),
+        // Reference score - for now use position-based (first items = higher reference match)
+        (item) => {
+          const idx = media.indexOf(item);
+          return Math.max(0, 100 - idx * 5); // Decrease by 5 for each position
+        }
+      );
+      
+      // Update media with personalized order
+      media = personalized;
+    }
+  }
   
   // Track recommended items in history
   if (media.length > 0) {
@@ -453,6 +548,13 @@ export async function processMessage(userMessage: string): Promise<ChatResponse>
     responseText += `\n\n_These are fresh picks - avoiding ${excludedCount} titles I already recommended._`;
   }
   
+  // Add personalization indicator if applicable
+  const learningState = loadLearningState();
+  const totalFeedback = learningState.totalLikes + learningState.totalDislikes;
+  if (totalFeedback >= learningState.config.minFeedbackThreshold && media.length > 0) {
+    responseText += `\n\n_Personalized based on your ${totalFeedback} feedback${totalFeedback > 1 ? 's' : ''}._`;
+  }
+  
   // Generate follow-up suggestions (use smart follow-ups if ambiguity detected)
   let suggestedFollowUps: string[];
   // Collect genres from recommended media
@@ -463,7 +565,7 @@ export async function processMessage(userMessage: string): Promise<ChatResponse>
     suggestedFollowUps = generateFollowUps(intent);
   }
   
-  // Create response message
+  // Create response message with reference movie metadata
   const message: ChatMessage = {
     id: generateMessageId(),
     role: 'assistant',
@@ -473,7 +575,10 @@ export async function processMessage(userMessage: string): Promise<ChatResponse>
     metadata: {
       intent,
       queryType: queryResult.queries[0]?.type,
-      source: usedFallback ? 'fallback' : queryResult.queries[0]?.source
+      source: usedFallback ? 'fallback' : queryResult.queries[0]?.source,
+      referenceMovieId,
+      referenceMovieTitle,
+      confidence: matchConfidence
     }
   };
   

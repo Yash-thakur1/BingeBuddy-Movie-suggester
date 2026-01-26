@@ -444,11 +444,116 @@ export function getSmartFollowUps(
   return shuffled.slice(0, 3);
 }
 
+/**
+ * Generate smart clarifying questions for low-confidence movie matches
+ * Used when the system finds multiple possible matches for a reference movie
+ */
+export function generateMovieMatchClarification(
+  queryTitle: string,
+  alternatives: Array<{
+    id: number;
+    title: string;
+    year: number | null;
+    language: string;
+    type: 'movie' | 'tv';
+  }>
+): {
+  message: string;
+  options: QuickOption[];
+} {
+  if (alternatives.length === 0) {
+    return {
+      message: `I couldn't find any movies matching "${queryTitle}". Could you check the spelling or provide more details like the release year?`,
+      options: [
+        { label: 'Search trending', value: "What's trending?", icon: '🔥' },
+        { label: 'Try different title', value: 'Let me try a different movie', icon: '🔄' }
+      ]
+    };
+  }
+  
+  // Build options from alternatives
+  const movieOptions: QuickOption[] = alternatives.slice(0, 4).map((alt, idx) => {
+    const yearStr = alt.year ? ` (${alt.year})` : '';
+    const langStr = alt.language.toUpperCase();
+    return {
+      label: `${alt.title}${yearStr} [${langStr}]`,
+      value: `movies like ${alt.title}${alt.year ? ` (${alt.year})` : ''}`,
+      icon: alt.type === 'movie' ? '🎬' : '📺'
+    };
+  });
+  
+  // Add a "none of these" option
+  movieOptions.push({
+    label: 'None of these',
+    value: `I meant a different "${queryTitle}"`,
+    icon: '❌'
+  });
+  
+  const message = `I found multiple matches for "${queryTitle}". Which one did you mean?`;
+  
+  return {
+    message,
+    options: movieOptions
+  };
+}
+
+/**
+ * Generate a disambiguation message for ambiguous movie references
+ */
+export function generateDisambiguationMessage(
+  bestMatch: { title: string; year: number | null; language: string },
+  confidence: 'medium' | 'low',
+  alternativeCount: number
+): string {
+  const yearStr = bestMatch.year ? ` (${bestMatch.year})` : '';
+  
+  if (confidence === 'medium') {
+    return `I'm showing recommendations based on **${bestMatch.title}${yearStr}**. ` +
+           `If you meant a different movie, just let me know!`;
+  }
+  
+  if (alternativeCount > 0) {
+    return `I found "${bestMatch.title}${yearStr}" but there are ${alternativeCount} other possible matches. ` +
+           `If this isn't right, please provide the release year or more details.`;
+  }
+  
+  return `I matched "${bestMatch.title}${yearStr}" but I'm not 100% certain. ` +
+         `You can add the year (e.g., "${bestMatch.title} 2015") for more precise results.`;
+}
+
+/**
+ * Generate smart year-based clarification
+ * Used when multiple movies share the same title but different years
+ */
+export function generateYearClarification(
+  title: string,
+  yearOptions: number[]
+): {
+  message: string;
+  options: QuickOption[];
+} {
+  const sortedYears = [...yearOptions].sort((a, b) => b - a); // Newest first
+  
+  const options: QuickOption[] = sortedYears.slice(0, 5).map(year => ({
+    label: `${title} (${year})`,
+    value: `movies like ${title} (${year})`,
+    icon: year >= 2020 ? '🆕' : year >= 2010 ? '📽️' : '🎞️'
+  }));
+  
+  return {
+    message: `There are multiple versions of "${title}". Which year are you looking for?`,
+    options
+  };
+}
+
 export default {
   analyzeAmbiguity,
   generateClarificationResponse,
   isVarietyRequest,
   isRefinementRequest,
   extractRefinements,
-  getSmartFollowUps
+  getSmartFollowUps,
+  generateMovieMatchClarification,
+  generateDisambiguationMessage,
+  generateYearClarification
 };

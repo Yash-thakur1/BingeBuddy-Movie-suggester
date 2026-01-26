@@ -60,7 +60,10 @@ export {
   isVarietyRequest,
   isRefinementRequest,
   extractRefinements,
-  getSmartFollowUps
+  getSmartFollowUps,
+  generateMovieMatchClarification,
+  generateDisambiguationMessage,
+  generateYearClarification
 } from './ambiguityDetection';
 export type { AmbiguityAnalysis, ClarifyingQuestion, QuickOption } from './ambiguityDetection';
 
@@ -88,3 +91,43 @@ export type {
   ExtractedReference,
   ReleaseEra
 } from './referenceMovieAnalyzer';
+
+// Confidence Scoring
+export {
+  calculateConfidenceScore,
+  shouldProceedWithRecommendations,
+  getClarificationMessage,
+  getRecommendationStrictness
+} from './confidenceScoring';
+export type {
+  ConfidenceLevel,
+  ConfidenceScore,
+  ConfidenceFactors,
+  ConfidenceBehavior,
+  AlternativeMatch,
+  MatchContext
+} from './confidenceScoring';
+
+// Preference Learning
+export {
+  loadLearningState,
+  saveLearningState,
+  recordFeedback,
+  removeFeedback,
+  getFeedback,
+  calculatePersonalizationScore,
+  applyPersonalizedRanking,
+  getPreferenceSummary,
+  resetLearning,
+  updateConfig,
+  extractAttributesFromMovie
+} from './preferenceLearning';
+export type {
+  FeedbackType,
+  MovieAttributes,
+  UserFeedback,
+  AttributeWeights,
+  PreferenceLearningState,
+  LearningConfig,
+  PersonalizationScore
+} from './preferenceLearning';
