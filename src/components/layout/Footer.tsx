@@ -22,7 +22,7 @@ export function Footer() {
               className="flex items-center gap-2 text-white font-display font-bold text-xl mb-4"
             >
               <Image
-                src="/images/Gemini_Generated_Image_b0be2yb0be2yb0be.png"
+                src="/images/flixora-logo.png"
                 alt="Flixora"
                 width={32}
                 height={32}

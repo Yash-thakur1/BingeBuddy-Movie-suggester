@@ -67,7 +67,7 @@ export function Header() {
               className="flex items-center gap-2 text-white font-display font-bold text-xl md:text-2xl"
             >
               <Image
-                src="/images/Gemini_Generated_Image_b0be2yb0be2yb0be.png"
+                src="/images/flixora-logo.png"
                 alt="Flixora"
                 width={40}
                 height={40}
