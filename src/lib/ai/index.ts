@@ -63,3 +63,17 @@ export {
   getSmartFollowUps
 } from './ambiguityDetection';
 export type { AmbiguityAnalysis, ClarifyingQuestion, QuickOption } from './ambiguityDetection';
+
+// Reference Movie Analysis (Cultural Context)
+export {
+  analyzeReferenceFromQuery,
+  findReferenceMovie,
+  analyzeReferenceMovie,
+  generateCulturalFilters,
+  extractReferenceTitle
+} from './referenceMovieAnalyzer';
+export type { 
+  ReferenceMovieInfo, 
+  CinemaIndustry, 
+  CulturalFilterRules 
+} from './referenceMovieAnalyzer';

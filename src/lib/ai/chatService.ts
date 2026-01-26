@@ -3,7 +3,8 @@
  * 
  * Main orchestration layer for the AI chat assistant.
  * Handles message processing, query execution, and response formatting.
- * Enhanced with diversity scoring, history tracking, and ambiguity detection.
+ * Enhanced with diversity scoring, history tracking, ambiguity detection,
+ * and cultural context awareness for "movies like X" queries.
  */
 
 import { parseIntent, ParsedIntent } from './intentParser';
@@ -25,6 +26,10 @@ import {
   getSmartFollowUps,
   AmbiguityAnalysis
 } from './ambiguityDetection';
+import {
+  analyzeReferenceFromQuery,
+  CulturalFilterRules
+} from './referenceMovieAnalyzer';
 import { 
   getTrendingMovies, 
   getTopRatedMovies, 
@@ -410,8 +415,21 @@ export async function processMessage(userMessage: string): Promise<ChatResponse>
   // Get filter rules from history
   const filterRules = history.generateFilterRules();
   
-  // Generate queries based on intent with filter rules
-  const queryResult = generateQueries(intent, filterRules);
+  // Analyze reference movie for cultural context (e.g., "movies like Baahubali")
+  let culturalFilters: CulturalFilterRules | undefined;
+  if (intent.hasReferenceMovie && intent.referenceTitle) {
+    const refAnalysis = await analyzeReferenceFromQuery(userMessage);
+    if (refAnalysis) {
+      culturalFilters = refAnalysis.filters;
+      // Use analyzed genres from reference movie if user didn't specify any
+      if (refAnalysis.info.genres.length > 0 && intent.genres.length === 0) {
+        intent.genres = refAnalysis.info.genres.slice(0, 3); // Take top 3 genres
+      }
+    }
+  }
+  
+  // Generate queries based on intent with filter rules and cultural context
+  const queryResult = generateQueries(intent, filterRules, culturalFilters);
   
   // Execute queries with diversity scoring
   const { media, usedFallback } = await executeQueries(queryResult, intent, true);

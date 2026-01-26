@@ -9,6 +9,7 @@
  * - Time period/era
  * - Rating preferences
  * - Keywords/themes
+ * - Reference movies (for "movies like X" queries)
  */
 
 import { GENRES, QUICK_MOODS, ERA_PRESETS, TV_GENRES, TV_QUICK_MOODS } from '@/lib/tmdb/config';
@@ -48,6 +49,10 @@ export interface ParsedIntent {
   directors: string[];
   year: number | null;
   minRating: number | null;
+  
+  // Reference movie (for "movies like X" queries)
+  referenceTitle: string | null;
+  hasReferenceMovie: boolean;
   
   // Original message for context
   originalMessage: string;
@@ -150,11 +155,48 @@ const RATING_PATTERNS = [
   { pattern: /critically acclaimed|award.?winning/i, minRating: 7.5 }
 ];
 
+// Reference movie patterns (for "movies like X" queries)
+const REFERENCE_PATTERNS = [
+  /movies?\s+like\s+['"]?([^'"]+?)['"]?\s*$/i,
+  /similar\s+to\s+['"]?([^'"]+?)['"]?\s*$/i,
+  /films?\s+like\s+['"]?([^'"]+?)['"]?\s*$/i,
+  /shows?\s+like\s+['"]?([^'"]+?)['"]?\s*$/i,
+  /more\s+like\s+['"]?([^'"]+?)['"]?\s*$/i,
+  /recommend.*like\s+['"]?([^'"]+?)['"]?\s*$/i,
+  /something\s+like\s+['"]?([^'"]+?)['"]?\s*$/i,
+  /if\s+i\s+liked?\s+['"]?([^'"]+?)['"]?/i,
+  /fans?\s+of\s+['"]?([^'"]+?)['"]?/i,
+  /like\s+['"]?([^'"]+?)['"]?\s*$/i,
+];
+
 /**
  * Normalize text for comparison
  */
 function normalizeText(text: string): string {
   return text.toLowerCase().trim();
+}
+
+/**
+ * Extract reference movie title from "movies like X" queries
+ */
+function extractReferenceTitle(message: string): string | null {
+  for (const pattern of REFERENCE_PATTERNS) {
+    const match = message.match(pattern);
+    if (match && match[1]) {
+      // Clean up the extracted title
+      let title = match[1].trim();
+      // Remove trailing punctuation
+      title = title.replace(/[,.!?]+$/, '').trim();
+      // Remove common words that might be captured
+      title = title.replace(/\s+(movie|film|show|series)s?$/i, '').trim();
+      
+      if (title.length >= 2) {
+        return title;
+      }
+    }
+  }
+  
+  return null;
 }
 
 /**
@@ -425,10 +467,14 @@ export function parseIntent(message: string): ParsedIntent {
   const keywords = extractKeywords(message);
   const responseHint = generateResponseHint(type, mediaType);
   
+  // Extract reference movie title for "movies like X" queries
+  const referenceTitle = extractReferenceTitle(message);
+  const hasReferenceMovie = referenceTitle !== null;
+  
   return {
-    type,
+    type: hasReferenceMovie ? 'similar' : type, // Override type if reference found
     mediaType,
-    confidence,
+    confidence: hasReferenceMovie ? Math.max(confidence, 0.9) : confidence,
     genres,
     genreNames,
     moods,
@@ -438,8 +484,12 @@ export function parseIntent(message: string): ParsedIntent {
     directors,
     year,
     minRating,
+    referenceTitle,
+    hasReferenceMovie,
     originalMessage: message,
-    responseHint
+    responseHint: hasReferenceMovie 
+      ? `Finding movies similar to "${referenceTitle}"...`
+      : responseHint
   };
 }
 

@@ -4,11 +4,13 @@
  * Converts parsed intents into structured queries that can be used
  * with the existing TMDB API and recommendation engine.
  * Now includes filter rules for deduplication and diversity.
+ * Enhanced with cultural context awareness for "movies like X" queries.
  */
 
 import { ParsedIntent, mapMoodsToGenres } from './intentParser';
 import { ERA_PRESETS, GENRES, TV_GENRES } from '@/lib/tmdb/config';
 import { FilterRules } from './recommendationHistory';
+import { CulturalFilterRules } from './referenceMovieAnalyzer';
 
 export interface MovieQuery {
   type: 'discover' | 'search' | 'trending' | 'top_rated' | 'similar' | 'watchlist';
@@ -37,11 +39,19 @@ export interface MovieQuery {
   includeAdult?: boolean;
   language?: string;
   
+  // Cultural/language filters (for "movies like X" queries)
+  withOriginalLanguage?: string;  // ISO 639-1 language code
+  withoutOriginalLanguage?: string;  // Language to exclude
+  region?: string;  // ISO 3166-1 country code
+  
   // Source info for response formatting
-  source: 'mood' | 'genre' | 'search' | 'trending' | 'top_rated' | 'similar' | 'random' | 'variety';
+  source: 'mood' | 'genre' | 'search' | 'trending' | 'top_rated' | 'similar' | 'random' | 'variety' | 'cultural';
   
   // Fetch more for diversity filtering
   fetchMultiplier?: number; // Fetch N times more results for filtering
+  
+  // Cultural context
+  culturalContext?: CulturalFilterRules;
 }
 
 export interface QueryResult {
@@ -53,6 +63,8 @@ export interface QueryResult {
   };
   // Structured filter rules for the recommendation engine
   filterRules?: FilterRules;
+  // Cultural filters for reference movie queries
+  culturalFilters?: CulturalFilterRules;
   // Whether this is a clarification request
   needsClarification?: boolean;
   clarificationMessage?: string;
@@ -60,8 +72,13 @@ export interface QueryResult {
 
 /**
  * Generate queries based on parsed intent
+ * Now accepts optional cultural filters for "movies like X" queries
  */
-export function generateQueries(intent: ParsedIntent, filterRules?: FilterRules): QueryResult {
+export function generateQueries(
+  intent: ParsedIntent, 
+  filterRules?: FilterRules,
+  culturalFilters?: CulturalFilterRules
+): QueryResult {
   switch (intent.type) {
     case 'recommend':
     case 'mood':
@@ -77,7 +94,7 @@ export function generateQueries(intent: ParsedIntent, filterRules?: FilterRules)
       return generateTopRatedQueries(intent, filterRules);
     
     case 'similar':
-      return generateSimilarQueries(intent, filterRules);
+      return generateSimilarQueries(intent, filterRules, culturalFilters);
     
     case 'genre':
       return generateGenreQueries(intent, filterRules);
@@ -348,10 +365,13 @@ function generateTopRatedQueries(intent: ParsedIntent, filterRules?: FilterRules
 
 /**
  * Generate similar content queries
+ * Enhanced to handle cultural context for "movies like X" queries
  */
-function generateSimilarQueries(intent: ParsedIntent, filterRules?: FilterRules): QueryResult {
-  // Note: For actual similar queries, we'd need a movie ID
-  // This is a fallback that uses genres/keywords
+function generateSimilarQueries(
+  intent: ParsedIntent, 
+  filterRules?: FilterRules,
+  culturalFilters?: CulturalFilterRules
+): QueryResult {
   const queries: MovieQuery[] = [];
   
   const mediaTypes: ('movie' | 'tv')[] = 
@@ -361,26 +381,75 @@ function generateSimilarQueries(intent: ParsedIntent, filterRules?: FilterRules)
   const excludeGenres = getCooldownGenres(filterRules);
   
   for (const mediaType of mediaTypes) {
-    queries.push({
+    const query: MovieQuery = {
       type: 'discover',
       mediaType,
       genres: intent.genres.length > 0 ? intent.genres : undefined,
       excludeGenres: excludeGenres.length > 0 ? excludeGenres : undefined,
-      minRating: 7,
+      minRating: 6.5,
       sortBy: 'popularity.desc',
       page: 1,
-      limit: 6,
-      source: 'similar',
-      fetchMultiplier: filterRules ? 2 : 1
-    });
+      limit: 8,
+      source: culturalFilters ? 'cultural' : 'similar',
+      fetchMultiplier: 3 // Fetch more for cultural filtering
+    };
+    
+    // Apply cultural filters if available
+    if (culturalFilters) {
+      query.withOriginalLanguage = culturalFilters.withOriginalLanguage;
+      query.culturalContext = culturalFilters;
+      
+      // For epic/mass-hero movies, prefer action genres
+      if (culturalFilters.preferEpicScale || culturalFilters.preferMassHeroNarrative) {
+        if (!query.genres || query.genres.length === 0) {
+          query.genres = [28, 12]; // Action, Adventure
+        }
+      }
+    }
+    
+    queries.push(query);
   }
+  
+  // If we have cultural context, add a secondary query for Hindi-dubbed versions
+  if (culturalFilters && culturalFilters.preferredLanguages.includes('hi') && 
+      culturalFilters.withOriginalLanguage !== 'hi') {
+    // Add Hindi language query for dubbed content
+    for (const mediaType of mediaTypes) {
+      queries.push({
+        type: 'discover',
+        mediaType,
+        genres: intent.genres.length > 0 ? intent.genres : [28, 12],
+        withOriginalLanguage: 'hi',
+        minRating: 6.5,
+        sortBy: 'popularity.desc',
+        page: 1,
+        limit: 4,
+        source: 'cultural',
+        fetchMultiplier: 2
+      });
+    }
+  }
+  
+  // Generate culturally-aware response
+  const intro = culturalFilters 
+    ? `If you liked **${culturalFilters.referenceTitle}**, you might enjoy these ${culturalFilters.industryDescription} films:`
+    : 'Based on what you mentioned, you might enjoy:';
+  
+  const explanation = culturalFilters
+    ? `These films share a similar epic scale, storytelling style, and cultural appeal.`
+    : 'These have a similar vibe and style!';
+  
+  const followUp = culturalFilters
+    ? 'Want me to include Hollywood movies too, or find more from this industry?'
+    : 'Tell me more about what you liked and I can find even better matches!';
   
   return {
     queries,
+    culturalFilters,
     responseContext: {
-      intro: 'Based on what you mentioned, you might enjoy:',
-      explanation: 'These have a similar vibe and style!',
-      followUp: 'Tell me more about what you liked and I can find even better matches!'
+      intro,
+      explanation,
+      followUp
     }
   };
 }
@@ -512,6 +581,7 @@ function generateFallbackQueries(intent: ParsedIntent): QueryResult {
 
 /**
  * Build TMDB API query parameters from MovieQuery
+ * Enhanced with cultural/language filtering support
  */
 export function buildTMDBParams(query: MovieQuery): Record<string, string | number | boolean | undefined> {
   const params: Record<string, string | number | boolean | undefined> = {
@@ -520,6 +590,10 @@ export function buildTMDBParams(query: MovieQuery): Record<string, string | numb
   
   if (query.genres && query.genres.length > 0) {
     params.with_genres = query.genres.join(',');
+  }
+  
+  if (query.excludeGenres && query.excludeGenres.length > 0) {
+    params.without_genres = query.excludeGenres.join(',');
   }
   
   if (query.year) {
@@ -541,6 +615,10 @@ export function buildTMDBParams(query: MovieQuery): Record<string, string | numb
     params['vote_count.gte'] = 100; // Ensure enough votes
   }
   
+  if (query.maxRating) {
+    params['vote_average.lte'] = query.maxRating;
+  }
+  
   if (query.sortBy) {
     params.sort_by = query.sortBy;
   }
@@ -549,8 +627,16 @@ export function buildTMDBParams(query: MovieQuery): Record<string, string | numb
     params.query = query.query;
   }
   
-  if (query.language) {
+  // Language filtering (critical for cultural context)
+  if (query.withOriginalLanguage) {
+    params.with_original_language = query.withOriginalLanguage;
+  } else if (query.language) {
     params.with_original_language = query.language;
+  }
+  
+  // Region filter
+  if (query.region) {
+    params.region = query.region;
   }
   
   params.include_adult = query.includeAdult || false;
