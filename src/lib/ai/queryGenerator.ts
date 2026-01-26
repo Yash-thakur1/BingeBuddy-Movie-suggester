@@ -10,7 +10,7 @@
 import { ParsedIntent, mapMoodsToGenres } from './intentParser';
 import { ERA_PRESETS, GENRES, TV_GENRES } from '@/lib/tmdb/config';
 import { FilterRules } from './recommendationHistory';
-import { CulturalFilterRules } from './referenceMovieAnalyzer';
+import { CulturalFilterRules, getEraYearRange, calculateEraSimilarity } from './referenceMovieAnalyzer';
 
 export interface MovieQuery {
   type: 'discover' | 'search' | 'trending' | 'top_rated' | 'similar' | 'watchlist';
@@ -481,6 +481,34 @@ function generateStrictCulturalQueries(
           source: 'cultural',
           fetchMultiplier: 2,
           withOriginalLanguage: lang,
+          culturalContext: culturalFilters
+        });
+      }
+    }
+  }
+  
+  // Tertiary query: Era-based boost (SOFT ranking signal, not hard filter)
+  // This adds a separate query for similar-era movies to boost their ranking
+  if (culturalFilters.preferSimilarEra && culturalFilters.referenceEra !== 'unknown') {
+    const eraYearRange = getEraYearRange(culturalFilters.referenceEra);
+    
+    if (eraYearRange && culturalFilters.eraFlexibility !== 'flexible') {
+      // For strict/moderate era flexibility, add an era-specific query
+      // Results from this will be boosted in ranking but not exclusive
+      for (const mediaType of mediaTypes) {
+        queries.push({
+          type: 'discover',
+          mediaType,
+          genres: targetGenres.length > 0 ? targetGenres : undefined,
+          yearRange: eraYearRange,
+          minRating: 6.5,
+          sortBy: 'popularity.desc',
+          page: 1,
+          limit: 5, // Smaller limit - just for era boosting
+          source: 'cultural',
+          fetchMultiplier: 2,
+          withOriginalLanguage: culturalFilters.withOriginalLanguage,
+          withoutOriginalLanguage: culturalFilters.withoutOriginalLanguage,
           culturalContext: culturalFilters
         });
       }

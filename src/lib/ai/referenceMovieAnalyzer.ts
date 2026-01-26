@@ -21,6 +21,17 @@ import { Movie, TVShow, MovieDetails, TVShowDetails } from '@/types/movie';
 // ============================================
 
 /**
+ * Release era classification for temporal matching
+ */
+export type ReleaseEra = 
+  | 'classic'     // Before 1990
+  | '90s'         // 1990-1999
+  | '2000s'       // 2000-2009
+  | '2010s'       // 2010-2019
+  | 'recent'      // 2020-present
+  | 'unknown';
+
+/**
  * Detailed cinematic profile for strict matching
  */
 export interface CinematicProfile {
@@ -32,6 +43,10 @@ export interface CinematicProfile {
   // Audience targeting
   audienceType: 'mass' | 'family' | 'youth' | 'mature' | 'niche' | 'universal';
   massAppealScore: number; // 0-100, how much mass-audience DNA
+  
+  // Release era (for temporal matching)
+  releaseEra: ReleaseEra;
+  releaseYear: number | null;
   
   // Thematic elements
   themes: ThematicElement[];
@@ -155,6 +170,12 @@ export interface CulturalFilterRules {
   referenceTitle: string;
   referenceId: number;
   referenceProfile: CinematicProfile;
+  
+  // Era preferences (SOFT ranking signals - NOT hard filters)
+  referenceEra: ReleaseEra;
+  referenceYear: number | null;
+  preferSimilarEra: boolean;          // If true, boost movies from similar era
+  eraFlexibility: 'strict' | 'moderate' | 'flexible'; // How much era matters
   
   // Justification template
   matchJustificationTemplate: string;
@@ -577,9 +598,28 @@ const KNOWN_INDIAN_EPICS = Object.keys(KNOWN_MASS_BLOCKBUSTERS).concat([
 // ============================================
 
 /**
- * Extract movie title from a "movies like X" query
+ * Result of extracting title and optional year from a query
+ */
+export interface ExtractedReference {
+  title: string;
+  year: number | null;
+  hasYear: boolean;
+}
+
+/**
+ * Extract movie title and optional year from a "movies like X" query
+ * Supports formats: "movies like Baahubali", "movies like Baahubali 2017", "movies like Baahubali (2017)"
  */
 export function extractReferenceTitle(message: string): string | null {
+  const extracted = extractReferenceTitleWithYear(message);
+  return extracted ? extracted.title : null;
+}
+
+/**
+ * Extract movie title AND optional year from a query
+ * Returns both title and year (if present) for precise matching
+ */
+export function extractReferenceTitleWithYear(message: string): ExtractedReference | null {
   const patterns = [
     /movies?\s+like\s+['"]?([^'"]+?)['"]?\s*$/i,
     /similar\s+to\s+['"]?([^'"]+?)['"]?\s*$/i,
@@ -604,7 +644,13 @@ export function extractReferenceTitle(message: string): string | null {
       title = title.replace(/\s+(movie|film|show|series)s?$/i, '').trim();
       
       if (title.length >= 2) {
-        return title;
+        // Extract year from title if present
+        const { cleanTitle, year } = extractYearFromTitle(title);
+        return {
+          title: cleanTitle,
+          year,
+          hasYear: year !== null
+        };
       }
     }
   }
@@ -613,21 +659,146 @@ export function extractReferenceTitle(message: string): string | null {
 }
 
 /**
+ * Extract year from a movie title string
+ * Handles formats: "Movie 2017", "Movie (2017)", "Movie [2017]"
+ */
+function extractYearFromTitle(titleWithYear: string): { cleanTitle: string; year: number | null } {
+  // Pattern 1: Year in parentheses - "Movie (2017)"
+  const parenMatch = titleWithYear.match(/^(.+?)\s*\((\d{4})\)\s*$/);
+  if (parenMatch) {
+    const year = parseInt(parenMatch[2], 10);
+    if (year >= 1900 && year <= new Date().getFullYear() + 2) {
+      return { cleanTitle: parenMatch[1].trim(), year };
+    }
+  }
+  
+  // Pattern 2: Year in brackets - "Movie [2017]"
+  const bracketMatch = titleWithYear.match(/^(.+?)\s*\[(\d{4})\]\s*$/);
+  if (bracketMatch) {
+    const year = parseInt(bracketMatch[2], 10);
+    if (year >= 1900 && year <= new Date().getFullYear() + 2) {
+      return { cleanTitle: bracketMatch[1].trim(), year };
+    }
+  }
+  
+  // Pattern 3: Year at end with space - "Movie 2017"
+  const spaceMatch = titleWithYear.match(/^(.+?)\s+(\d{4})\s*$/);
+  if (spaceMatch) {
+    const year = parseInt(spaceMatch[2], 10);
+    // Only accept if year is reasonable (1900-future)
+    if (year >= 1900 && year <= new Date().getFullYear() + 2) {
+      return { cleanTitle: spaceMatch[1].trim(), year };
+    }
+  }
+  
+  // Pattern 4: Year after comma - "Movie, 2017"
+  const commaMatch = titleWithYear.match(/^(.+?),\s*(\d{4})\s*$/);
+  if (commaMatch) {
+    const year = parseInt(commaMatch[2], 10);
+    if (year >= 1900 && year <= new Date().getFullYear() + 2) {
+      return { cleanTitle: commaMatch[1].trim(), year };
+    }
+  }
+  
+  // No year found
+  return { cleanTitle: titleWithYear, year: null };
+}
+
+/**
+ * Calculate the release era from a year
+ * Used as a soft ranking signal, not a hard filter
+ */
+export function calculateReleaseEra(year: number | null): ReleaseEra {
+  if (!year) return 'unknown';
+  
+  if (year < 1990) return 'classic';
+  if (year >= 1990 && year < 2000) return '90s';
+  if (year >= 2000 && year < 2010) return '2000s';
+  if (year >= 2010 && year < 2020) return '2010s';
+  return 'recent'; // 2020 and beyond
+}
+
+/**
+ * Get year range for an era (for query filtering)
+ * Returns null if era is unknown (no filtering should be applied)
+ */
+export function getEraYearRange(era: ReleaseEra): { from: number; to: number } | null {
+  const currentYear = new Date().getFullYear();
+  
+  switch (era) {
+    case 'classic':
+      return { from: 1950, to: 1989 };
+    case '90s':
+      return { from: 1990, to: 1999 };
+    case '2000s':
+      return { from: 2000, to: 2009 };
+    case '2010s':
+      return { from: 2010, to: 2019 };
+    case 'recent':
+      return { from: 2020, to: currentYear + 1 };
+    case 'unknown':
+    default:
+      return null;
+  }
+}
+
+/**
+ * Calculate era similarity score (0-100)
+ * Used for soft ranking of recommendations
+ */
+export function calculateEraSimilarity(referenceEra: ReleaseEra, candidateYear: number | null): number {
+  if (referenceEra === 'unknown' || !candidateYear) {
+    return 50; // Neutral score when era unknown
+  }
+  
+  const candidateEra = calculateReleaseEra(candidateYear);
+  
+  // Exact era match
+  if (candidateEra === referenceEra) return 100;
+  
+  // Adjacent era (e.g., 2000s and 2010s)
+  const eraOrder: ReleaseEra[] = ['classic', '90s', '2000s', '2010s', 'recent'];
+  const refIndex = eraOrder.indexOf(referenceEra);
+  const candIndex = eraOrder.indexOf(candidateEra);
+  
+  if (refIndex === -1 || candIndex === -1) return 50;
+  
+  const distance = Math.abs(refIndex - candIndex);
+  
+  switch (distance) {
+    case 1: return 75;  // Adjacent era
+    case 2: return 50;  // Two eras apart
+    case 3: return 30;  // Three eras apart
+    default: return 20; // Very different eras
+  }
+}
+
+/**
  * Search for the reference movie in TMDB
+ * Enhanced with optional year matching for precision
  */
 export async function findReferenceMovie(
   title: string,
-  preferMovies: boolean = true
-): Promise<{ movie: Movie | TVShow | null; type: 'movie' | 'tv' }> {
+  preferMovies: boolean = true,
+  year?: number | null
+): Promise<{ movie: Movie | TVShow | null; type: 'movie' | 'tv'; confidence: 'exact' | 'high' | 'medium' | 'low' }> {
   try {
     // Try movie search first if preferring movies
     if (preferMovies) {
       const movieResults = await searchMovies(title, 1);
       if (movieResults.results.length > 0) {
-        // Find best match (exact or close title match)
-        const bestMatch = findBestTitleMatch(movieResults.results, title);
-        if (bestMatch) {
-          return { movie: bestMatch, type: 'movie' };
+        // If year is provided, find exact year match first
+        if (year) {
+          const exactYearMatch = findBestTitleMatchWithYear(movieResults.results, title, year);
+          if (exactYearMatch) {
+            return { movie: exactYearMatch, type: 'movie', confidence: 'exact' };
+          }
+        }
+        
+        // Find best title match (without strict year requirement)
+        const bestMatch = findBestTitleMatch(movieResults.results, title, year);
+        if (bestMatch.match) {
+          return { movie: bestMatch.match, type: 'movie', confidence: bestMatch.confidence };
         }
       }
     }
@@ -635,9 +806,16 @@ export async function findReferenceMovie(
     // Try TV search
     const tvResults = await searchTVShows(title, 1);
     if (tvResults.results.length > 0) {
-      const bestMatch = findBestTitleMatch(tvResults.results, title);
-      if (bestMatch) {
-        return { movie: bestMatch, type: 'tv' };
+      if (year) {
+        const exactYearMatch = findBestTitleMatchWithYear(tvResults.results, title, year);
+        if (exactYearMatch) {
+          return { movie: exactYearMatch, type: 'tv', confidence: 'exact' };
+        }
+      }
+      
+      const bestMatch = findBestTitleMatch(tvResults.results, title, year);
+      if (bestMatch.match) {
+        return { movie: bestMatch.match, type: 'tv', confidence: bestMatch.confidence };
       }
     }
     
@@ -645,52 +823,127 @@ export async function findReferenceMovie(
     if (preferMovies) {
       const movieResults = await searchMovies(title, 1);
       if (movieResults.results.length > 0) {
-        return { movie: movieResults.results[0], type: 'movie' };
+        return { movie: movieResults.results[0], type: 'movie', confidence: 'low' };
       }
     }
     
-    return { movie: null, type: 'movie' };
+    return { movie: null, type: 'movie', confidence: 'low' };
   } catch (error) {
     console.error('Error finding reference movie:', error);
-    return { movie: null, type: 'movie' };
+    return { movie: null, type: 'movie', confidence: 'low' };
   }
 }
 
 /**
- * Find best matching title from search results
+ * Find exact match by title AND year
  */
-function findBestTitleMatch<T extends Movie | TVShow>(
+function findBestTitleMatchWithYear<T extends Movie | TVShow>(
   results: T[],
-  searchTitle: string
+  searchTitle: string,
+  year: number
 ): T | null {
   const normalizedSearch = searchTitle.toLowerCase().trim();
   
-  // First try exact match
   for (const result of results) {
     const title = 'title' in result ? result.title : result.name;
-    if (title.toLowerCase() === normalizedSearch) {
+    const releaseDate = 'release_date' in result ? result.release_date : 
+      ('first_air_date' in result ? result.first_air_date : null);
+    const resultYear = releaseDate ? new Date(releaseDate).getFullYear() : null;
+    
+    // Exact title match with exact year
+    if (title.toLowerCase() === normalizedSearch && resultYear === year) {
       return result;
     }
   }
   
-  // Then try starts-with match
+  // Try partial match with exact year
   for (const result of results) {
     const title = 'title' in result ? result.title : result.name;
-    if (title.toLowerCase().startsWith(normalizedSearch)) {
+    const releaseDate = 'release_date' in result ? result.release_date : 
+      ('first_air_date' in result ? result.first_air_date : null);
+    const resultYear = releaseDate ? new Date(releaseDate).getFullYear() : null;
+    
+    if (title.toLowerCase().includes(normalizedSearch) && resultYear === year) {
       return result;
     }
   }
   
-  // Then try contains match
+  return null;
+}
+
+/**
+ * Find best matching title from search results with confidence scoring
+ * Enhanced to use year as a soft ranking signal when available
+ */
+function findBestTitleMatch<T extends Movie | TVShow>(
+  results: T[],
+  searchTitle: string,
+  preferredYear?: number | null
+): { match: T | null; confidence: 'high' | 'medium' | 'low' } {
+  const normalizedSearch = searchTitle.toLowerCase().trim();
+  
+  // Score each result
+  const scored: Array<{ result: T; score: number; confidence: 'high' | 'medium' | 'low' }> = [];
+  
   for (const result of results) {
     const title = 'title' in result ? result.title : result.name;
-    if (title.toLowerCase().includes(normalizedSearch)) {
-      return result;
+    const titleLower = title.toLowerCase();
+    const releaseDate = 'release_date' in result ? result.release_date : 
+      ('first_air_date' in result ? result.first_air_date : null);
+    const resultYear = releaseDate ? new Date(releaseDate).getFullYear() : null;
+    
+    let score = 0;
+    let confidence: 'high' | 'medium' | 'low' = 'low';
+    
+    // Title matching scoring
+    if (titleLower === normalizedSearch) {
+      score += 100; // Exact match
+      confidence = 'high';
+    } else if (titleLower.startsWith(normalizedSearch)) {
+      score += 80; // Starts with
+      confidence = 'high';
+    } else if (titleLower.includes(normalizedSearch)) {
+      score += 60; // Contains
+      confidence = 'medium';
+    } else if (normalizedSearch.includes(titleLower)) {
+      score += 40; // Search contains title
+      confidence = 'medium';
+    } else {
+      score += 20; // Fuzzy match
+      confidence = 'low';
     }
+    
+    // Year scoring (soft signal, not strict filter)
+    if (preferredYear && resultYear) {
+      if (resultYear === preferredYear) {
+        score += 30; // Exact year match bonus
+        if (confidence === 'medium') confidence = 'high';
+      } else if (Math.abs(resultYear - preferredYear) <= 1) {
+        score += 15; // Within 1 year
+      } else if (Math.abs(resultYear - preferredYear) <= 3) {
+        score += 5; // Within 3 years
+      }
+    }
+    
+    // Popularity bonus for disambiguation
+    if (result.popularity > 50) score += 10;
+    if (result.popularity > 100) score += 10;
+    
+    // Vote count bonus for quality
+    if (result.vote_count > 1000) score += 5;
+    if (result.vote_count > 5000) score += 5;
+    
+    scored.push({ result, score, confidence });
   }
   
-  // Return first result as fallback
-  return results[0] || null;
+  // Sort by score descending
+  scored.sort((a, b) => b.score - a.score);
+  
+  if (scored.length > 0 && scored[0].score > 20) {
+    return { match: scored[0].result, confidence: scored[0].confidence };
+  }
+  
+  return { match: results[0] || null, confidence: 'low' };
 }
 
 // ============================================
@@ -776,7 +1029,8 @@ export async function analyzeReferenceMovie(
     voteCount, 
     popularity,
     isIndianCinema,
-    originalLanguage
+    originalLanguage,
+    releaseDate
   );
   
   // Legacy fields (derived from cinematic profile)
@@ -837,16 +1091,21 @@ function buildCinematicProfile(
   voteCount: number,
   popularity: number,
   isIndianCinema: boolean,
-  originalLanguage: string
+  originalLanguage: string,
+  releaseDate?: string | null
 ): CinematicProfile {
   const titleLower = title.toLowerCase();
   const overviewLower = overview.toLowerCase();
   const combinedText = `${titleLower} ${overviewLower}`;
   
+  // Extract release year and era
+  const releaseYear = releaseDate ? parseInt(releaseDate.substring(0, 4), 10) || null : null;
+  const releaseEra = calculateReleaseEra(releaseYear);
+  
   // Check if this is a known blockbuster with pre-defined profile
   const knownProfile = findKnownProfile(titleLower);
   if (knownProfile) {
-    return fillProfileDefaults(knownProfile);
+    return fillProfileDefaults(knownProfile, releaseYear, releaseEra);
   }
   
   // Analyze narrative scale
@@ -906,7 +1165,9 @@ function buildCinematicProfile(
     productionScale,
     visualStyle,
     hasSuperstarLead,
-    starPowerTier
+    starPowerTier,
+    releaseYear,
+    releaseEra
   };
 }
 
@@ -925,7 +1186,11 @@ function findKnownProfile(titleLower: string): Partial<CinematicProfile> | null 
 /**
  * Fill in default values for a partial profile
  */
-function fillProfileDefaults(partial: Partial<CinematicProfile>): CinematicProfile {
+function fillProfileDefaults(
+  partial: Partial<CinematicProfile>,
+  releaseYear?: number | null,
+  releaseEra?: ReleaseEra
+): CinematicProfile {
   return {
     narrativeScale: partial.narrativeScale || 'large',
     storytellingStyle: partial.storytellingStyle || 'commercial-masala',
@@ -943,7 +1208,9 @@ function fillProfileDefaults(partial: Partial<CinematicProfile>): CinematicProfi
     productionScale: partial.productionScale || 'big-budget',
     visualStyle: partial.visualStyle || 'stylized-action',
     hasSuperstarLead: partial.hasSuperstarLead ?? true,
-    starPowerTier: partial.starPowerTier || 'regional-superstar'
+    starPowerTier: partial.starPowerTier || 'regional-superstar',
+    releaseYear: releaseYear ?? partial.releaseYear ?? null,
+    releaseEra: releaseEra ?? partial.releaseEra ?? 'unknown'
   };
 }
 
@@ -1344,6 +1611,12 @@ export function generateCulturalFilters(info: ReferenceMovieInfo): CulturalFilte
     referenceId: info.id,
     referenceProfile: profile,
     
+    // Era preferences (SOFT ranking signals - NOT hard filters)
+    referenceEra: profile.releaseEra || 'unknown',
+    referenceYear: profile.releaseYear || null,
+    preferSimilarEra: profile.releaseEra !== 'unknown', // Prefer similar era if known
+    eraFlexibility: determineEraFlexibility(profile),
+    
     // Justification template
     matchJustificationTemplate: buildJustificationTemplate(info, profile)
   };
@@ -1510,6 +1783,32 @@ function buildJustificationTemplate(info: ReferenceMovieInfo, profile: Cinematic
 }
 
 /**
+ * Determine how flexible to be with era matching
+ * - 'strict': For recent blockbusters, era matters more
+ * - 'moderate': For mid-range movies, some flexibility
+ * - 'flexible': For classics or movies where era doesn't define the experience
+ */
+function determineEraFlexibility(profile: CinematicProfile): 'strict' | 'moderate' | 'flexible' {
+  // Recent movies with high mass appeal - era matters more
+  if (profile.releaseEra === 'recent' && profile.massAppealScore >= 85) {
+    return 'strict'; // Modern blockbuster aesthetic
+  }
+  
+  // 2010s movies - moderate flexibility
+  if (profile.releaseEra === '2010s' && profile.massAppealScore >= 70) {
+    return 'moderate';
+  }
+  
+  // Classic movies or art-house - era matters less, quality matters more
+  if (profile.releaseEra === 'classic' || profile.storytellingStyle === 'art-house') {
+    return 'flexible';
+  }
+  
+  // Default to moderate flexibility
+  return 'moderate';
+}
+
+/**
  * Get human-readable industry description
  */
 function getIndustryDescription(industry: CinemaIndustry): string {
@@ -1537,18 +1836,25 @@ function getIndustryDescription(industry: CinemaIndustry): string {
 
 /**
  * Complete reference movie analysis pipeline
+ * Enhanced with optional year extraction for precise matching
  */
 export async function analyzeReferenceFromQuery(
   message: string
-): Promise<{ info: ReferenceMovieInfo; filters: CulturalFilterRules } | null> {
-  // Extract title from query
-  const title = extractReferenceTitle(message);
+): Promise<{ info: ReferenceMovieInfo; filters: CulturalFilterRules; confidence: 'exact' | 'high' | 'medium' | 'low' } | null> {
+  // Try enhanced extraction with year first
+  const extracted = extractReferenceTitleWithYear(message);
+  
+  // Fall back to legacy extraction if enhanced fails
+  const title = extracted?.title || extractReferenceTitle(message);
   if (!title) {
     return null;
   }
   
-  // Find the movie in TMDB
-  const { movie, type } = await findReferenceMovie(title);
+  // Extract year if available (from enhanced extraction)
+  const year = extracted?.year ?? null;
+  
+  // Find the movie in TMDB with optional year for precision
+  const { movie, type, confidence } = await findReferenceMovie(title, true, year);
   if (!movie) {
     return null;
   }
@@ -1556,10 +1862,10 @@ export async function analyzeReferenceFromQuery(
   // Analyze the movie
   const info = await analyzeReferenceMovie(movie, type);
   
-  // Generate cultural filters
+  // Generate cultural filters (includes era preferences)
   const filters = generateCulturalFilters(info);
   
-  return { info, filters };
+  return { info, filters, confidence };
 }
 
 /**

@@ -64,21 +64,27 @@ export {
 } from './ambiguityDetection';
 export type { AmbiguityAnalysis, ClarifyingQuestion, QuickOption } from './ambiguityDetection';
 
-// Reference Movie Analysis (Cultural Context) - Enhanced Strict Matching
+// Reference Movie Analysis (Cultural Context) - Enhanced Strict Matching with Optional Year
 export {
   analyzeReferenceFromQuery,
   findReferenceMovie,
   analyzeReferenceMovie,
   generateCulturalFilters,
   extractReferenceTitle,
+  extractReferenceTitleWithYear,
   generateSimilarMovieIntro,
   generateMatchJustification,
-  generateMatchExplanation
+  generateMatchExplanation,
+  calculateReleaseEra,
+  getEraYearRange,
+  calculateEraSimilarity
 } from './referenceMovieAnalyzer';
 export type { 
   ReferenceMovieInfo, 
   CinemaIndustry, 
   CulturalFilterRules,
   CinematicProfile,
-  ThematicElement
+  ThematicElement,
+  ExtractedReference,
+  ReleaseEra
 } from './referenceMovieAnalyzer';
