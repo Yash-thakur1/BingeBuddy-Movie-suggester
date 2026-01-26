@@ -163,9 +163,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * Save session and update state
+   * Also handles migrating guest learning preferences to the authenticated user
    */
-  const saveSession = useCallback((user: AuthUser | null, token: string | null) => {
+  const saveSession = useCallback(async (user: AuthUser | null, token: string | null) => {
     if (user && token) {
+      // Capture guest session ID before it's cleared
+      const guestSessionId = sessionStorage.getItem('flixora-guest-session-id');
+      
       saveStoredSession(user, token);
       setSession({
         user,
@@ -173,6 +177,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading: false,
         isAuthenticated: true,
       });
+      
+      // Migrate guest preferences to authenticated user
+      if (guestSessionId) {
+        try {
+          const { migrateGuestToUser } = await import('@/lib/ai/preferenceLearning');
+          await migrateGuestToUser(guestSessionId);
+          // Clear guest session ID after migration
+          sessionStorage.removeItem('flixora-guest-session-id');
+        } catch (e) {
+          console.error('[Auth] Failed to migrate guest preferences:', e);
+        }
+      }
     } else {
       clearStoredSession();
       setSession({
@@ -249,6 +265,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear all user cache to prevent data leakage
     if (userId) {
       clearUserCache(userId);
+      
+      // Clear user-specific learning data from localStorage
+      // Note: Guest session data is already isolated and will be fresh on new session
+      try {
+        const userLearningKey = `flixora-preference-learning-user-${userId}`;
+        localStorage.removeItem(userLearningKey);
+      } catch {}
     }
   }, [session.user?.id, saveSession]);
 

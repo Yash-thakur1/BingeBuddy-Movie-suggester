@@ -181,13 +181,74 @@ const EMPTY_WEIGHTS: AttributeWeights = {
 };
 
 // ============================================
-// Storage
+// User-Scoped Storage
 // ============================================
 
-const STORAGE_KEY = 'flixora-preference-learning';
+const STORAGE_KEY_PREFIX = 'flixora-preference-learning';
+const GUEST_SESSION_KEY = 'flixora-guest-session-id';
 
 /**
- * Load learning state from localStorage
+ * Get or create a guest session ID for unauthenticated users
+ * This ensures guest preferences are isolated per browser session
+ */
+function getGuestSessionId(): string {
+  if (typeof window === 'undefined') return 'server';
+  
+  let sessionId = sessionStorage.getItem(GUEST_SESSION_KEY);
+  if (!sessionId) {
+    sessionId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem(GUEST_SESSION_KEY, sessionId);
+  }
+  return sessionId;
+}
+
+/**
+ * Get the current user ID from the auth session
+ * Returns null if not authenticated
+ */
+function getCurrentUserId(): string | null {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const authStorage = localStorage.getItem('flixora-auth-session');
+    if (authStorage) {
+      const session = JSON.parse(authStorage);
+      if (session?.user?.id && Date.now() < session.expiresAt) {
+        return session.user.id;
+      }
+    }
+  } catch {}
+  
+  return null;
+}
+
+/**
+ * Get the storage key for the current user/session
+ */
+function getStorageKey(): string {
+  const userId = getCurrentUserId();
+  if (userId) {
+    return `${STORAGE_KEY_PREFIX}-user-${userId}`;
+  }
+  return `${STORAGE_KEY_PREFIX}-guest-${getGuestSessionId()}`;
+}
+
+/**
+ * Check if the current user is authenticated
+ */
+export function isAuthenticated(): boolean {
+  return getCurrentUserId() !== null;
+}
+
+/**
+ * Get the current user identifier (user ID or guest session ID)
+ */
+export function getCurrentUserIdentifier(): string {
+  return getCurrentUserId() || getGuestSessionId();
+}
+
+/**
+ * Load learning state from localStorage (user-scoped)
  */
 export function loadLearningState(): PreferenceLearningState {
   if (typeof window === 'undefined') {
@@ -195,7 +256,8 @@ export function loadLearningState(): PreferenceLearningState {
   }
   
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const storageKey = getStorageKey();
+    const stored = localStorage.getItem(storageKey);
     if (stored) {
       const state = JSON.parse(stored) as PreferenceLearningState;
       // Ensure config has all fields (for backwards compatibility)
@@ -210,22 +272,172 @@ export function loadLearningState(): PreferenceLearningState {
 }
 
 /**
- * Save learning state to localStorage
+ * Save learning state to localStorage (user-scoped)
+ * For authenticated users, also triggers server sync
  */
 export function saveLearningState(state: PreferenceLearningState): void {
   if (typeof window === 'undefined') return;
   
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const storageKey = getStorageKey();
+    localStorage.setItem(storageKey, JSON.stringify(state));
+    
+    // If authenticated, sync to server (debounced)
+    if (isAuthenticated()) {
+      debouncedServerSync(state);
+    }
   } catch (e) {
     console.error('[PreferenceLearning] Failed to save state:', e);
+  }
+}
+
+// Debounce server sync to avoid too many API calls
+let syncTimeout: NodeJS.Timeout | null = null;
+const SYNC_DEBOUNCE_MS = 2000;
+
+function debouncedServerSync(state: PreferenceLearningState): void {
+  if (syncTimeout) {
+    clearTimeout(syncTimeout);
+  }
+  
+  syncTimeout = setTimeout(() => {
+    syncToServer(state);
+  }, SYNC_DEBOUNCE_MS);
+}
+
+/**
+ * Sync learning state to server for authenticated users
+ */
+async function syncToServer(state: PreferenceLearningState): Promise<void> {
+  try {
+    const response = await fetch('/api/user/learning', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        learningData: state,
+        totalLikes: state.totalLikes,
+        totalDislikes: state.totalDislikes
+      })
+    });
+    
+    if (!response.ok) {
+      console.error('[PreferenceLearning] Server sync failed:', response.status);
+    }
+  } catch (e) {
+    console.error('[PreferenceLearning] Server sync error:', e);
+  }
+}
+
+/**
+ * Load learning state from server for authenticated users
+ * Should be called on login to restore preferences
+ */
+export async function loadFromServer(): Promise<PreferenceLearningState | null> {
+  if (!isAuthenticated()) return null;
+  
+  try {
+    const response = await fetch('/api/user/learning');
+    if (!response.ok) return null;
+    
+    const data = await response.json();
+    if (data.learningData) {
+      const state = data.learningData as PreferenceLearningState;
+      state.config = { ...DEFAULT_CONFIG, ...state.config };
+      
+      // Save to local storage for offline access
+      const storageKey = getStorageKey();
+      localStorage.setItem(storageKey, JSON.stringify(state));
+      
+      return state;
+    }
+  } catch (e) {
+    console.error('[PreferenceLearning] Failed to load from server:', e);
+  }
+  
+  return null;
+}
+
+/**
+ * Migrate guest preferences to authenticated user
+ * Called when a guest user logs in
+ */
+export async function migrateGuestToUser(guestSessionId: string): Promise<void> {
+  if (!isAuthenticated()) return;
+  
+  try {
+    const guestKey = `${STORAGE_KEY_PREFIX}-guest-${guestSessionId}`;
+    const guestData = localStorage.getItem(guestKey);
+    
+    if (guestData) {
+      const guestState = JSON.parse(guestData) as PreferenceLearningState;
+      
+      // Load existing user state from server
+      const serverState = await loadFromServer();
+      
+      // If user has no existing preferences, use guest preferences
+      if (!serverState || serverState.feedbackHistory.length === 0) {
+        saveLearningState(guestState);
+      } else if (guestState.feedbackHistory.length > 0) {
+        // Merge guest feedback with existing user feedback
+        const mergedState = mergeLearningStates(serverState, guestState);
+        saveLearningState(mergedState);
+      }
+      
+      // Clean up guest data
+      localStorage.removeItem(guestKey);
+    }
+  } catch (e) {
+    console.error('[PreferenceLearning] Migration failed:', e);
+  }
+}
+
+/**
+ * Merge two learning states (for migration)
+ */
+function mergeLearningStates(
+  primary: PreferenceLearningState,
+  secondary: PreferenceLearningState
+): PreferenceLearningState {
+  // Combine feedback history, avoiding duplicates
+  const existingIds = new Set(
+    primary.feedbackHistory.map(fb => `${fb.mediaType}-${fb.mediaId}`)
+  );
+  
+  const newFeedback = secondary.feedbackHistory.filter(
+    fb => !existingIds.has(`${fb.mediaType}-${fb.mediaId}`)
+  );
+  
+  const mergedHistory = [...primary.feedbackHistory, ...newFeedback];
+  
+  // Recalculate weights with merged history
+  return recalculateWeights({
+    ...primary,
+    feedbackHistory: mergedHistory,
+    totalLikes: mergedHistory.filter(fb => fb.feedback === 'like').length,
+    totalDislikes: mergedHistory.filter(fb => fb.feedback === 'dislike').length,
+    lastUpdated: Date.now()
+  });
+}
+
+/**
+ * Clear all learning data for current user
+ */
+export function clearUserLearningData(): void {
+  if (typeof window === 'undefined') return;
+  
+  const storageKey = getStorageKey();
+  localStorage.removeItem(storageKey);
+  
+  // If authenticated, also clear from server
+  if (isAuthenticated()) {
+    fetch('/api/user/learning', { method: 'DELETE' }).catch(console.error);
   }
 }
 
 /**
  * Create empty state
  */
-function createEmptyState(): PreferenceLearningState {
+export function createEmptyState(): PreferenceLearningState {
   return {
     feedbackHistory: [],
     attributeWeights: { ...EMPTY_WEIGHTS },

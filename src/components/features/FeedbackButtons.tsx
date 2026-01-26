@@ -191,12 +191,30 @@ interface FeedbackSummaryProps {
 export function FeedbackSummary({ className }: FeedbackSummaryProps) {
   const [state, setState] = useState(() => loadLearningState());
   
-  // Refresh state periodically
+  // Refresh state on mount and when storage changes
   React.useEffect(() => {
+    // Initial load
+    setState(loadLearningState());
+    
+    // Listen for storage changes (cross-tab sync and user changes)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key?.startsWith('flixora-preference-learning') || 
+          e.key === 'flixora-auth-session') {
+        setState(loadLearningState());
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also poll periodically for same-tab updates
     const interval = setInterval(() => {
       setState(loadLearningState());
     }, 5000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
   }, []);
   
   const totalFeedback = state.totalLikes + state.totalDislikes;

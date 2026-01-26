@@ -26,6 +26,7 @@ model User {
   watchlist     WatchlistItem[]
   preferences   UserPreferences?
   recentlyViewed RecentlyViewed[]
+  learningState UserLearningState?  // AI preference learning
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -124,4 +125,22 @@ model RecentlyViewed {
   
   @@unique([userId, mediaId, mediaType])
   @@index([userId])
+}
+
+// AI Preference Learning State - stored per user
+model UserLearningState {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  
+  // JSON-encoded learning state (feedback history, attribute weights, etc.)
+  learningData    String   // JSON string of PreferenceLearningState
+  
+  // Quick stats for querying without parsing JSON
+  totalLikes      Int      @default(0)
+  totalDislikes   Int      @default(0)
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

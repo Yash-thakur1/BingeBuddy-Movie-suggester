@@ -6,24 +6,43 @@ import Image from 'next/image';
 import { ChatMessage as ChatMessageType, MediaItem, getGenreNames } from '@/lib/ai';
 import { getImageUrl } from '@/lib/tmdb/config';
 import { cn } from '@/lib/utils';
+import { FeedbackButtons } from '@/components/features/FeedbackButtons';
+import { extractAttributesFromMovie } from '@/lib/ai/preferenceLearning';
 
 /**
  * Media card displayed inside chat messages
  */
-const ChatMediaCard = memo(function ChatMediaCard({ item }: { item: MediaItem }) {
+const ChatMediaCard = memo(function ChatMediaCard({ 
+  item, 
+  referenceMovieId 
+}: { 
+  item: MediaItem; 
+  referenceMovieId?: number;
+}) {
   const href = item.type === 'movie' ? `/movie/${item.id}` : `/tv/${item.id}`;
   const year = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null;
   const genres = getGenreNames(item.genreIds.slice(0, 2), item.type);
   
+  // Get or create attributes for feedback
+  const attributes = item.attributes || extractAttributesFromMovie(
+    {
+      id: item.id,
+      title: item.title,
+      original_language: item.originalLanguage || 'en',
+      genre_ids: item.genreIds,
+      release_date: item.releaseDate || undefined,
+      vote_average: item.voteAverage,
+      popularity: item.popularity || 0
+    },
+    item.type
+  );
+  
   return (
-    <Link 
-      href={href}
-      className="group flex gap-3 p-2 rounded-xl bg-dark-800/50 hover:bg-dark-700/70 
+    <div className="group flex gap-3 p-2 rounded-xl bg-dark-800/50 hover:bg-dark-700/70 
                  border border-dark-700/30 hover:border-primary-500/30
-                 transition-all duration-200"
-    >
-      {/* Poster */}
-      <div className="relative w-16 h-24 rounded-lg overflow-hidden flex-shrink-0 bg-dark-700">
+                 transition-all duration-200">
+      {/* Poster - clickable */}
+      <Link href={href} className="relative w-16 h-24 rounded-lg overflow-hidden flex-shrink-0 bg-dark-700">
         {item.posterPath ? (
           <Image
             src={getImageUrl(item.posterPath, 'w92')}
@@ -40,13 +59,15 @@ const ChatMediaCard = memo(function ChatMediaCard({ item }: { item: MediaItem })
             </svg>
           </div>
         )}
-      </div>
+      </Link>
       
       {/* Info */}
       <div className="flex-1 min-w-0 py-1">
-        <h4 className="font-medium text-white text-sm truncate group-hover:text-primary-400 transition-colors">
-          {item.title}
-        </h4>
+        <Link href={href}>
+          <h4 className="font-medium text-white text-sm truncate group-hover:text-primary-400 transition-colors cursor-pointer">
+            {item.title}
+          </h4>
+        </Link>
         
         <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
           {year && <span>{year}</span>}
@@ -69,19 +90,40 @@ const ChatMediaCard = memo(function ChatMediaCard({ item }: { item: MediaItem })
         <p className="text-xs text-gray-400 mt-1.5 line-clamp-2 leading-relaxed">
           {item.overview || 'No description available.'}
         </p>
+        
+        {/* Like/Dislike Feedback Buttons */}
+        <div className="mt-2 flex items-center justify-between">
+          <FeedbackButtons
+            mediaId={item.id}
+            mediaType={item.type}
+            attributes={attributes}
+            referenceMovieId={referenceMovieId}
+            size="sm"
+          />
+          <Link 
+            href={href}
+            className="text-xs text-primary-400 hover:text-primary-300 transition-colors"
+          >
+            View details →
+          </Link>
+        </div>
       </div>
-    </Link>
+    </div>
   );
 });
 
 /**
  * Media grid for chat messages
  */
-function ChatMediaGrid({ media }: { media: MediaItem[] }) {
+function ChatMediaGrid({ media, referenceMovieId }: { media: MediaItem[]; referenceMovieId?: number }) {
   return (
     <div className="mt-3 space-y-2">
       {media.map((item) => (
-        <ChatMediaCard key={`${item.type}-${item.id}`} item={item} />
+        <ChatMediaCard 
+          key={`${item.type}-${item.id}`} 
+          item={item} 
+          referenceMovieId={referenceMovieId}
+        />
       ))}
     </div>
   );
@@ -141,7 +183,10 @@ export const ChatMessage = memo(function ChatMessage({ message }: { message: Cha
             
             {/* Media cards */}
             {message.media && message.media.length > 0 && (
-              <ChatMediaGrid media={message.media} />
+              <ChatMediaGrid 
+                media={message.media} 
+                referenceMovieId={message.metadata?.referenceMovieId as number | undefined}
+              />
             )}
           </>
         )}

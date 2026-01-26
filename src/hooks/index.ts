@@ -615,3 +615,107 @@ export function useScrollPrefetch(
   return { prefetchedCount };
 }
 
+// ============================================
+// useUserLearning Hook
+// ============================================
+
+import { 
+  loadLearningState, 
+  loadFromServer, 
+  migrateGuestToUser,
+  isAuthenticated,
+  getCurrentUserIdentifier,
+  PreferenceLearningState
+} from '@/lib/ai/preferenceLearning';
+
+interface UseUserLearningReturn {
+  learningState: PreferenceLearningState | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  userIdentifier: string;
+  refreshState: () => void;
+}
+
+/**
+ * Hook to manage user-scoped learning state
+ * Handles loading from server for authenticated users
+ * and manages guest session migration on login
+ */
+export function useUserLearning(): UseUserLearningReturn {
+  const [learningState, setLearningState] = useState<PreferenceLearningState | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userAuth, setUserAuth] = useState(false);
+  const [userIdentifier, setUserIdentifier] = useState('');
+  const previousUserRef = useRef<string | null>(null);
+  const guestSessionRef = useRef<string | null>(null);
+
+  const refreshState = useCallback(() => {
+    setLearningState(loadLearningState());
+  }, []);
+
+  useEffect(() => {
+    const initLearning = async () => {
+      setIsLoading(true);
+      
+      const currentAuth = isAuthenticated();
+      const currentUserId = getCurrentUserIdentifier();
+      
+      setUserAuth(currentAuth);
+      setUserIdentifier(currentUserId);
+
+      // Check if user just logged in (was guest, now authenticated)
+      if (currentAuth && previousUserRef.current && previousUserRef.current !== currentUserId) {
+        // User logged in - migrate guest preferences if any
+        if (guestSessionRef.current) {
+          await migrateGuestToUser(guestSessionRef.current);
+          guestSessionRef.current = null;
+        }
+        
+        // Load from server for authenticated users
+        const serverState = await loadFromServer();
+        if (serverState) {
+          setLearningState(serverState);
+        } else {
+          setLearningState(loadLearningState());
+        }
+      } else if (currentAuth) {
+        // Authenticated user - try to load from server first
+        const serverState = await loadFromServer();
+        if (serverState) {
+          setLearningState(serverState);
+        } else {
+          setLearningState(loadLearningState());
+        }
+      } else {
+        // Guest user - load from local storage
+        guestSessionRef.current = currentUserId;
+        setLearningState(loadLearningState());
+      }
+      
+      previousUserRef.current = currentUserId;
+      setIsLoading(false);
+    };
+
+    initLearning();
+  }, []);
+
+  // Listen for storage changes (in case of updates from other tabs)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key?.startsWith('flixora-preference-learning')) {
+        refreshState();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [refreshState]);
+
+  return {
+    learningState,
+    isLoading,
+    isAuthenticated: userAuth,
+    userIdentifier,
+    refreshState
+  };
+}

@@ -120,7 +120,14 @@ export {
   getPreferenceSummary,
   resetLearning,
   updateConfig,
-  extractAttributesFromMovie
+  extractAttributesFromMovie,
+  // User-scoped storage functions
+  isAuthenticated,
+  getCurrentUserIdentifier,
+  loadFromServer,
+  migrateGuestToUser,
+  clearUserLearningData,
+  createEmptyState
 } from './preferenceLearning';
 export type {
   FeedbackType,
