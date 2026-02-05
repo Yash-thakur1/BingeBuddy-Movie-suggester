@@ -1,12 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Mail, Lock, User, Eye, EyeOff, Loader2, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, Lock, User, Eye, EyeOff, Loader2, Check, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui';
+import {
+  validateEmail,
+  quickSyntaxCheck,
+  type EmailValidationResult,
+  type EmailSeverity,
+} from '@/lib/emailValidation';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -21,11 +27,18 @@ export default function SignUpPage() {
   const [error, setError] = useState('');
   const [emailTouched, setEmailTouched] = useState(false);
 
-  // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const isEmailValid = emailRegex.test(email);
-  const showEmailError = emailTouched && email.length > 0 && !isEmailValid;
-  const showEmailSuccess = emailTouched && email.length > 0 && isEmailValid;
+  // Smart email validation state
+  const [emailValidation, setEmailValidation] = useState<EmailValidationResult | null>(null);
+  const [isValidatingEmail, setIsValidatingEmail] = useState(false);
+  const emailValidationTimer = useRef<NodeJS.Timeout | null>(null);
+  const latestEmailRef = useRef(email);
+
+  // Derived email state
+  const isEmailValid = emailValidation?.isValid === true && emailValidation.severity !== 'warning';
+  const isEmailAcceptable = emailValidation?.isValid === true; // valid, possibly with warning
+  const emailHasError = emailTouched && emailValidation?.severity === 'error' && email.length > 0;
+  const emailHasWarning = emailValidation?.severity === 'warning' && email.length > 0;
+  const emailIsGood = emailTouched && emailValidation?.severity === 'success' && email.length > 0;
 
   // Password strength indicators
   const hasMinLength = password.length >= 8;
@@ -40,14 +53,71 @@ export default function SignUpPage() {
     }
   }, [isAuthenticated, router]);
 
+  // Debounced smart email validation
+  useEffect(() => {
+    latestEmailRef.current = email;
+
+    // Clear previous timer
+    if (emailValidationTimer.current) {
+      clearTimeout(emailValidationTimer.current);
+    }
+
+    // Empty email — reset
+    if (!email.trim()) {
+      setEmailValidation(null);
+      setIsValidatingEmail(false);
+      return;
+    }
+
+    // Instant syntax feedback while typing
+    const syntaxError = quickSyntaxCheck(email);
+    if (syntaxError && emailTouched) {
+      setEmailValidation({ isValid: false, severity: 'error', message: syntaxError });
+      setIsValidatingEmail(false);
+      return;
+    }
+
+    // If email looks incomplete, don't run full validation yet
+    if (!email.includes('@') || !email.split('@')[1]?.includes('.')) {
+      if (emailTouched) {
+        setEmailValidation(null);
+      }
+      return;
+    }
+
+    // Debounce the full async validation (400ms after stop typing)
+    setIsValidatingEmail(true);
+    emailValidationTimer.current = setTimeout(async () => {
+      const result = await validateEmail(email);
+      // Only update if email hasn't changed during async validation
+      if (latestEmailRef.current === email) {
+        setEmailValidation(result);
+        setIsValidatingEmail(false);
+      }
+    }, 400);
+
+    return () => {
+      if (emailValidationTimer.current) {
+        clearTimeout(emailValidationTimer.current);
+      }
+    };
+  }, [email, emailTouched]);
+
+  // Accept a typo suggestion
+  const acceptEmailSuggestion = useCallback(() => {
+    if (emailValidation?.suggestedEmail) {
+      setEmail(emailValidation.suggestedEmail);
+    }
+  }, [emailValidation]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
     // Validate email
-    if (!isEmailValid) {
-      setError('Please enter a valid email address');
+    if (!isEmailAcceptable) {
+      setError(emailValidation?.message || 'Please enter a valid email address');
       setIsLoading(false);
       return;
     }
@@ -168,27 +238,92 @@ export default function SignUpPage() {
                 id="email"
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onBlur={() => setEmailTouched(true)}
+                aria-describedby="email-feedback"
+                aria-invalid={emailHasError ? true : undefined}
                 className={`w-full pl-10 pr-10 py-3 bg-dark-800 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
-                  showEmailError
+                  emailHasError
                     ? 'border-red-500 focus:ring-red-500'
-                    : showEmailSuccess
+                    : emailHasWarning
+                    ? 'border-yellow-500 focus:ring-yellow-500'
+                    : emailIsGood
                     ? 'border-green-500 focus:ring-green-500'
                     : 'border-dark-600 focus:ring-primary-500'
                 }`}
                 placeholder="you@example.com"
               />
-              {email.length > 0 && emailTouched && (
-                <span className={`absolute right-3 top-1/2 -translate-y-1/2 ${showEmailSuccess ? 'text-green-400' : 'text-red-400'}`}>
-                  {showEmailSuccess ? <Check className="w-5 h-5" /> : '✕'}
-                </span>
-              )}
+              {/* Status icon */}
+              <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                {isValidatingEmail ? (
+                  <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                ) : emailIsGood ? (
+                  <Check className="w-5 h-5 text-green-400" />
+                ) : emailHasWarning ? (
+                  <AlertTriangle className="w-4 h-4 text-yellow-400" />
+                ) : emailHasError ? (
+                  <span className="text-red-400 text-sm font-bold">✕</span>
+                ) : null}
+              </span>
             </div>
-            {showEmailError && (
-              <p className="mt-1.5 text-xs text-red-400">Please enter a valid email address</p>
-            )}
+
+            {/* Inline feedback messages */}
+            <AnimatePresence mode="wait">
+              {emailHasError && emailValidation?.message && (
+                <motion.p
+                  key="email-error"
+                  id="email-feedback"
+                  role="alert"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="mt-1.5 text-xs text-red-400"
+                >
+                  {emailValidation.message}
+                </motion.p>
+              )}
+
+              {emailHasWarning && emailValidation?.message && (
+                <motion.div
+                  key="email-warning"
+                  id="email-feedback"
+                  role="status"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="mt-1.5 flex items-center gap-1.5 text-xs text-yellow-400"
+                >
+                  <span>{emailValidation.message}</span>
+                  {emailValidation.suggestedEmail && (
+                    <button
+                      type="button"
+                      onClick={acceptEmailSuggestion}
+                      className="underline font-medium hover:text-yellow-300 transition-colors focus:outline-none focus:ring-1 focus:ring-yellow-400 rounded px-0.5"
+                    >
+                      Fix it
+                    </button>
+                  )}
+                </motion.div>
+              )}
+
+              {emailIsGood && (
+                <motion.p
+                  key="email-success"
+                  id="email-feedback"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.15 }}
+                  className="mt-1.5 text-xs text-green-400"
+                >
+                  {emailValidation?.message}
+                </motion.p>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Password */}
@@ -253,7 +388,7 @@ export default function SignUpPage() {
           {/* Submit Button */}
           <Button
             type="submit"
-            disabled={isLoading || !hasMinLength || !passwordsMatch || !isEmailValid}
+            disabled={isLoading || !hasMinLength || !passwordsMatch || !isEmailAcceptable || isValidatingEmail}
             className="w-full py-3 text-lg"
           >
             {isLoading ? (
