@@ -3,6 +3,7 @@
 import { Play, Bookmark, BookmarkCheck, Share2 } from 'lucide-react';
 import { TVShow } from '@/types/movie';
 import { Button } from '@/components/ui';
+import { EngagementButtons } from '@/components/features';
 import { useWatchlistStore, useUIStore } from '@/store';
 import { cn } from '@/lib/utils';
 
@@ -44,7 +45,12 @@ export function TVShowDetailsActions({ show, trailerKey }: TVShowDetailsActionsP
   };
 
   return (
-    <div className="flex flex-wrap gap-4">
+    <div className="space-y-4">
+      {/* Like / Dislike */}
+      <EngagementButtons mediaType="tv" mediaId={show.id} />
+
+      {/* Action buttons */}
+      <div className="flex flex-wrap gap-4">
       {trailerKey && (
         <Button
           size="lg"
@@ -79,6 +85,7 @@ export function TVShowDetailsActions({ show, trailerKey }: TVShowDetailsActionsP
         <Share2 className="w-5 h-5" />
         Share
       </Button>
+      </div>
     </div>
   );
 }

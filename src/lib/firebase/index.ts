@@ -64,5 +64,16 @@ export {
   type MediaViewParams
 } from './analytics';
 
+// Engagement (client-side)
+export {
+  getEngagementCounts,
+  getUserReaction,
+  toggleReaction,
+  subscribeToEngagement,
+  type ReactionType,
+  type EngagementCounts,
+  type UserReaction,
+} from './engagement';
+
 // Note: Admin SDK exports are in a separate file (./admin.ts)
 // Import directly from '@/lib/firebase/admin' in server-side code only
