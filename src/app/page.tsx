@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { getTrendingMovies, getPopularMovies, getTopRatedMovies, getMovieVideos } from '@/lib/tmdb';
 import { HeroSection } from '@/components/features';
-import { MovieSection, MovieCarousel } from '@/components/movies';
+import { MovieCarousel, CompactPosterSection } from '@/components/movies';
 import { HeroSkeleton, MovieGridSkeleton } from '@/components/ui';
 import { QuickMoodsSection } from './QuickMoodsSection';
 
@@ -42,10 +42,10 @@ async function MovieSections() {
   
   return (
     <>
-      <MovieSection
+      <CompactPosterSection
         title="🔥 Trending This Week"
         description="Most popular movies right now"
-        movies={trendingWeek.results.slice(0, 12)}
+        movies={trendingWeek.results.slice(0, 18)}
         viewAllHref="/discover?sort=popularity.desc"
       />
       
@@ -55,10 +55,10 @@ async function MovieSections() {
         movies={popular.results}
       />
       
-      <MovieSection
+      <CompactPosterSection
         title="🏆 Top Rated"
         description="Critically acclaimed masterpieces"
-        movies={topRated.results.slice(0, 12)}
+        movies={topRated.results.slice(0, 18)}
         viewAllHref="/discover?sort=vote_average.desc"
       />
     </>

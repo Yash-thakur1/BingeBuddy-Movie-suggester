@@ -5,6 +5,10 @@ export { TrailerModal, TrailerPlayer } from './TrailerModal';
 export { CastCard, CastSection, CrewCard, CrewSection } from './CastSection';
 export { WatchProvidersSection } from './WatchProviders';
 
+// Compact poster components
+export { CompactPosterCard } from './CompactPosterCard';
+export { CompactPosterGrid, CompactPosterGridSkeleton, CompactPosterSection } from './CompactPosterGrid';
+
 // TV Show exports
 export { TVShowCard, TVShowCardHorizontal } from './TVShowCard';
 export { TVShowGrid, TVShowSection, TVShowCarousel } from './TVShowGrid';

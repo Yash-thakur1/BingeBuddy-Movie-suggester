@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { getTrendingTVShows, getPopularTVShows, getTopRatedTVShows, getAiringTodayTVShows, getTVShowVideos } from '@/lib/tmdb';
 import { TVHeroSection } from '@/components/features';
-import { TVShowSection, TVShowCarousel } from '@/components/movies';
+import { TVShowCarousel, CompactPosterSection } from '@/components/movies';
 import { HeroSkeleton, MovieGridSkeleton } from '@/components/ui';
 import { TVQuickMoodsSection } from './TVQuickMoodsSection';
 
@@ -43,10 +43,10 @@ async function TVSections() {
   
   return (
     <>
-      <TVShowSection
+      <CompactPosterSection
         title="🔥 Trending This Week"
         description="Most popular TV shows right now"
-        shows={trendingWeek.results.slice(0, 12)}
+        tvShows={trendingWeek.results.slice(0, 18)}
         viewAllHref="/tv/discover?sort=popularity.desc"
       />
       
@@ -56,10 +56,10 @@ async function TVSections() {
         shows={airingToday.results}
       />
       
-      <TVShowSection
+      <CompactPosterSection
         title="⭐ Popular Shows"
         description="Fan favorites everyone loves"
-        shows={popular.results.slice(0, 12)}
+        tvShows={popular.results.slice(0, 18)}
         viewAllHref="/tv/discover?sort=popularity.desc"
       />
       

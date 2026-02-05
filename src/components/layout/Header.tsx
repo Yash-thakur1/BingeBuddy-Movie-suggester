@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Search, Bookmark, Sparkles, Home, Film, Tv } from 'lucide-react';
 import { SearchBar, MobileSearchOverlay } from './SearchBar';
 import { UserMenu } from './UserMenu';
+import { MobileDrawer } from './MobileDrawer';
 import { useUIStore, useWatchlistStore } from '@/store';
 import { cn } from '@/lib/utils';
 
@@ -171,61 +171,8 @@ export function Header() {
         </div>
       </header>
 
-      {/* Mobile Menu */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-16 left-0 right-0 z-30 md:hidden bg-dark-950 border-b border-dark-800"
-          >
-            <nav className="container mx-auto px-4 py-4">
-              {/* Content Type Tabs for Mobile */}
-              <div className="flex items-center bg-dark-800/50 rounded-full p-1 mb-4">
-                {contentTabs.map((tab) => (
-                  <Link
-                    key={tab.href}
-                    href={tab.href}
-                    onClick={closeMobileMenu}
-                    className={cn(
-                      'flex-1 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
-                      'flex items-center justify-center gap-2',
-                      tab.isActive
-                        ? 'bg-primary-600 text-white'
-                        : 'text-gray-400 hover:text-white'
-                    )}
-                  >
-                    <tab.icon className="w-4 h-4" />
-                    {tab.label}
-                  </Link>
-                ))}
-              </div>
-              
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={isTVActive && link.href === '/discover' ? '/tv/discover' : 
-                        isTVActive && link.href === '/recommendations' ? '/tv/recommendations' : link.href}
-                  onClick={closeMobileMenu}
-                  className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300',
-                    'hover:text-white hover:bg-dark-800 transition-colors'
-                  )}
-                >
-                  <link.icon className="w-5 h-5" />
-                  {link.label}
-                  {link.badge !== undefined && link.badge > 0 && (
-                    <span className="ml-auto bg-primary-600 text-white text-xs px-2 py-0.5 rounded-full">
-                      {link.badge}
-                    </span>
-                  )}
-                </Link>
-              ))}
-            </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Mobile Drawer Navigation */}
+      <MobileDrawer />
 
       {/* Mobile Search Overlay */}
       <MobileSearchOverlay />
