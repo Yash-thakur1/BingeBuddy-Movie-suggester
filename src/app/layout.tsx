@@ -23,14 +23,14 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Flixora - Discover Your Next Favorite Movie',
-    template: '%s | Flixora',
+    default: 'BingeBuddy - Discover Your Next Favorite Movie',
+    template: '%s | BingeBuddy',
   },
   description:
     'Discover movies tailored to your taste with our AI-powered recommendation engine. Browse trending, popular, and critically acclaimed films.',
   keywords: [
     'movies',
-    'flixora',
+    'bingebuddy',
     'movie recommendations',
     'film discovery',
     'movie database',
@@ -38,13 +38,13 @@ export const metadata: Metadata = {
     'watch movies',
   ],
   authors: [{ name: 'Yash Kumar' }],
-  creator: 'Flixora',
+  creator: 'BingeBuddy',
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://flixora.vercel.app',
-    siteName: 'Flixora',
-    title: 'Flixora - Discover Your Next Favorite Movie',
+    url: 'https://flixora-movie-suggester.vercel.app',
+    siteName: 'BingeBuddy',
+    title: 'BingeBuddy - Discover Your Next Favorite Movie',
     description:
       'Discover movies tailored to your taste with our AI-powered recommendation engine.',
     images: [
@@ -52,13 +52,13 @@ export const metadata: Metadata = {
         url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Flixora',
+        alt: 'BingeBuddy',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Flixora - Discover Your Next Favorite Movie',
+    title: 'BingeBuddy - Discover Your Next Favorite Movie',
     description:
       'Discover movies tailored to your taste with our AI-powered recommendation engine.',
     images: ['/og-image.jpg'],

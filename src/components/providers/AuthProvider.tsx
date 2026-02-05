@@ -35,7 +35,7 @@ interface AuthContextType extends AuthSession {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 // Keep localStorage in sync so the Zustand store can read the token
-const AUTH_STORAGE_KEY = 'flixora-auth-session';
+const AUTH_STORAGE_KEY = 'bingebuddy-auth-session';
 
 function syncToLocalStorage(user: AuthUser, token: string) {
   if (typeof window === 'undefined') return;
@@ -148,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (userId) {
       clearUserCache(userId);
       try {
-        const userLearningKey = `flixora-preference-learning-user-${userId}`;
+        const userLearningKey = `bingebuddy-preference-learning-user-${userId}`;
         localStorage.removeItem(userLearningKey);
       } catch {}
     }

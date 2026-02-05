@@ -1,12 +1,12 @@
-# 🎬 Flixora - AI-Powered Movie Discovery
+# 🎬 BingeBuddy - AI-Powered Movie Discovery
 
 <div align="center">
 
-![Flixora Banner](https://via.placeholder.com/1200x400/0d0e10/ef5744?text=Flixora+-+Discover+Your+Next+Favorite+Movie)
+![BingeBuddy Banner](https://via.placeholder.com/1200x400/0d0e10/ef5744?text=BingeBuddy+-+Discover+Your+Next+Favorite+Movie)
 
 **A premium movie discovery platform with AI-powered recommendations, personalized learning, and a Netflix-inspired experience.**
 
-[![Live Demo](https://img.shields.io/badge/Live-Demo-ef5744?style=for-the-badge)](https://flixora.vercel.app)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-ef5744?style=for-the-badge)](https://flixora-movie-suggester.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -262,6 +262,6 @@ This project is licensed under the ISC License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ by [Yash Kumar](https://github.com/Yash-thakur1)**
 
-[⬆ Back to top](#-flixora---ai-powered-movie-discovery)
+[⬆ Back to top](#-bingebuddy---ai-powered-movie-discovery)
 
 </div>

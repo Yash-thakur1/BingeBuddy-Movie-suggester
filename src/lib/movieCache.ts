@@ -11,7 +11,7 @@
 
 import { MovieDetails, Credits, VideosResponse, WatchProvidersResponse, PaginatedResponse, Movie, Cast, Crew } from '@/types/movie';
 
-const MOVIE_CACHE_PREFIX = 'flixora-movie';
+const MOVIE_CACHE_PREFIX = 'bingebuddy-movie';
 const CACHE_VERSION = 'v1';
 
 // Cache durations

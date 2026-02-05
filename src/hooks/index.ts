@@ -702,7 +702,7 @@ export function useUserLearning(): UseUserLearningReturn {
   // Listen for storage changes (in case of updates from other tabs)
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key?.startsWith('flixora-preference-learning')) {
+      if (e.key?.startsWith('bingebuddy-preference-learning')) {
         refreshState();
       }
     };

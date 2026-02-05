@@ -133,13 +133,13 @@ export function MobileDrawer() {
                 className="flex items-center gap-2 text-white font-display font-bold text-lg"
               >
                 <Image
-                  src="/images/flixora-logo.png"
-                  alt="Flixora"
+                  src="/images/bingebuddy-logo.png"
+                  alt="BingeBuddy"
                   width={32}
                   height={32}
                   className="w-8 h-8"
                 />
-                Flixora
+                BingeBuddy
               </Link>
               <button
                 onClick={closeMobileMenu}

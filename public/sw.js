@@ -1,5 +1,5 @@
 /**
- * Flixora Service Worker
+ * BingeBuddy Service Worker
  * 
  * Caching strategies:
  * - Static assets: Cache First
@@ -9,10 +9,10 @@
  */
 
 const CACHE_VERSION = 'v1';
-const STATIC_CACHE = `flixora-static-${CACHE_VERSION}`;
-const DYNAMIC_CACHE = `flixora-dynamic-${CACHE_VERSION}`;
-const IMAGE_CACHE = `flixora-images-${CACHE_VERSION}`;
-const API_CACHE = `flixora-api-${CACHE_VERSION}`;
+const STATIC_CACHE = `bingebuddy-static-${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `bingebuddy-dynamic-${CACHE_VERSION}`;
+const IMAGE_CACHE = `bingebuddy-images-${CACHE_VERSION}`;
+const API_CACHE = `bingebuddy-api-${CACHE_VERSION}`;
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -64,7 +64,7 @@ self.addEventListener('activate', (event) => {
         cacheNames
           .filter((name) => {
             return (
-              name.startsWith('flixora-') &&
+              name.startsWith('bingebuddy-') &&
               name !== STATIC_CACHE &&
               name !== DYNAMIC_CACHE &&
               name !== IMAGE_CACHE &&
@@ -244,7 +244,7 @@ async function networkFirstWithFallback(request) {
       `<!DOCTYPE html>
       <html>
         <head>
-          <title>Offline - Flixora</title>
+          <title>Offline - BingeBuddy</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
             body {

@@ -13,7 +13,7 @@ import { getCache, setCache, CACHE_KEYS, clearUserCache } from '@/lib/cache';
 // Auth Session Helper (localStorage-based)
 // ============================================
 
-const AUTH_STORAGE_KEY = 'flixora-auth-session';
+const AUTH_STORAGE_KEY = 'bingebuddy-auth-session';
 
 interface StoredSession {
   user: {

@@ -79,10 +79,10 @@ export function FirebaseAuthProvider({ children }: FirebaseAuthProviderProps) {
       await logAuthEvent('login', 'email');
       
       // Migrate guest preferences
-      const guestSessionId = sessionStorage.getItem('flixora-guest-session-id');
+      const guestSessionId = sessionStorage.getItem('bingebuddy-guest-session-id');
       if (guestSessionId) {
         await migrateGuestToUser(guestSessionId);
-        sessionStorage.removeItem('flixora-guest-session-id');
+        sessionStorage.removeItem('bingebuddy-guest-session-id');
       }
     }
     
@@ -99,10 +99,10 @@ export function FirebaseAuthProvider({ children }: FirebaseAuthProviderProps) {
       await logAuthEvent('signup', 'email');
       
       // Migrate guest preferences
-      const guestSessionId = sessionStorage.getItem('flixora-guest-session-id');
+      const guestSessionId = sessionStorage.getItem('bingebuddy-guest-session-id');
       if (guestSessionId) {
         await migrateGuestToUser(guestSessionId);
-        sessionStorage.removeItem('flixora-guest-session-id');
+        sessionStorage.removeItem('bingebuddy-guest-session-id');
       }
     }
     
@@ -119,10 +119,10 @@ export function FirebaseAuthProvider({ children }: FirebaseAuthProviderProps) {
       await logAuthEvent('login', 'google');
       
       // Migrate guest preferences
-      const guestSessionId = sessionStorage.getItem('flixora-guest-session-id');
+      const guestSessionId = sessionStorage.getItem('bingebuddy-guest-session-id');
       if (guestSessionId) {
         await migrateGuestToUser(guestSessionId);
-        sessionStorage.removeItem('flixora-guest-session-id');
+        sessionStorage.removeItem('bingebuddy-guest-session-id');
       }
     }
     

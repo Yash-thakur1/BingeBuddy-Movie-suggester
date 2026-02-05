@@ -67,13 +67,13 @@ export function Header() {
               className="flex items-center gap-2 text-white font-display font-bold text-xl md:text-2xl"
             >
               <Image
-                src="/images/flixora-logo.png"
-                alt="Flixora"
+                src="/images/bingebuddy-logo.png"
+                alt="BingeBuddy"
                 width={40}
                 height={40}
                 className="w-8 h-8 md:w-10 md:h-10"
               />
-              <span className="hidden sm:inline">Flixora</span>
+              <span className="hidden sm:inline">BingeBuddy</span>
             </Link>
 
             {/* Content Type Tabs (Movies / TV Series) */}

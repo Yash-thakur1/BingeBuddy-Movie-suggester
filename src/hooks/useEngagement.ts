@@ -15,7 +15,7 @@ export type { ReactionType, EngagementCounts };
 // Stable visitor ID (Firebase UID or random guest)
 // ============================================
 
-const GUEST_ID_KEY = 'flixora-guest-id';
+const GUEST_ID_KEY = 'bingebuddy-guest-id';
 
 function getOrCreateGuestId(): string {
   if (typeof window === 'undefined') return '';
@@ -31,7 +31,7 @@ function getOrCreateGuestId(): string {
 // Session cache (survives SPA navigations)
 // ============================================
 
-const CACHE_KEY = 'flixora-engagement-cache';
+const CACHE_KEY = 'bingebuddy-engagement-cache';
 
 interface CacheEntry {
   counts: EngagementCounts;

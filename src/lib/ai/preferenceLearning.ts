@@ -184,8 +184,8 @@ const EMPTY_WEIGHTS: AttributeWeights = {
 // User-Scoped Storage
 // ============================================
 
-const STORAGE_KEY_PREFIX = 'flixora-preference-learning';
-const GUEST_SESSION_KEY = 'flixora-guest-session-id';
+const STORAGE_KEY_PREFIX = 'bingebuddy-preference-learning';
+const GUEST_SESSION_KEY = 'bingebuddy-guest-session-id';
 
 /**
  * Get or create a guest session ID for unauthenticated users
@@ -210,7 +210,7 @@ function getCurrentUserId(): string | null {
   if (typeof window === 'undefined') return null;
   
   try {
-    const authStorage = localStorage.getItem('flixora-auth-session');
+    const authStorage = localStorage.getItem('bingebuddy-auth-session');
     if (authStorage) {
       const session = JSON.parse(authStorage);
       if (session?.user?.id && Date.now() < session.expiresAt) {

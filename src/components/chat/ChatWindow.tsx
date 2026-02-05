@@ -55,7 +55,7 @@ export function ChatWindow() {
               </svg>
             </div>
             <div>
-              <h3 className="font-semibold text-white">Flixora Assistant</h3>
+              <h3 className="font-semibold text-white">BingeBuddy Assistant</h3>
               <p className="text-xs text-gray-400">Your personal movie guide</p>
             </div>
           </div>

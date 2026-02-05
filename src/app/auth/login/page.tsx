@@ -65,7 +65,7 @@ export default function LoginPage() {
         <div className="text-center">
           <Link href="/" className="inline-block">
             <h1 className="text-4xl font-display font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
-              Flixora
+              BingeBuddy
             </h1>
           </Link>
           <h2 className="mt-6 text-3xl font-bold text-white">

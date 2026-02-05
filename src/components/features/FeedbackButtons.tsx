@@ -198,8 +198,8 @@ export function FeedbackSummary({ className }: FeedbackSummaryProps) {
     
     // Listen for storage changes (cross-tab sync and user changes)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key?.startsWith('flixora-preference-learning') || 
-          e.key === 'flixora-auth-session') {
+      if (e.key?.startsWith('bingebuddy-preference-learning') || 
+          e.key === 'bingebuddy-auth-session') {
         setState(loadLearningState());
       }
     };

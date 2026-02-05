@@ -184,14 +184,14 @@ export default function SignUpPage() {
         <div className="text-center">
           <Link href="/" className="inline-block">
             <h1 className="text-4xl font-display font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
-              Flixora
+              BingeBuddy
             </h1>
           </Link>
           <h2 className="mt-6 text-3xl font-bold text-white">
             Create your account
           </h2>
           <p className="mt-2 text-gray-400">
-            Join Flixora to save your watchlist and get personalized recommendations
+            Join BingeBuddy to save your watchlist and get personalized recommendations
           </p>
         </div>
 

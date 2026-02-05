@@ -20,7 +20,7 @@
 
 const CACHE_VERSION = 2;
 const MEMORY_CACHE_MAX_SIZE = 100; // Max items in memory
-const IDB_DB_NAME = 'flixora-cache';
+const IDB_DB_NAME = 'bingebuddy-cache';
 const IDB_STORE_NAME = 'data';
 const STORAGE_PREFIX = 'flx:';
 

@@ -8,7 +8,7 @@
  * - Full cache clear on logout
  */
 
-const CACHE_PREFIX = 'flixora-cache';
+const CACHE_PREFIX = 'bingebuddy-cache';
 const CACHE_VERSION = 'v1';
 const DEFAULT_MAX_AGE = 5 * 60 * 1000; // 5 minutes
 const DEFAULT_STALE_AGE = 24 * 60 * 60 * 1000; // 24 hours

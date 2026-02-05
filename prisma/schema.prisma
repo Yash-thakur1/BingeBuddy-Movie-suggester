@@ -22,7 +22,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   
-  // Custom fields for Flixora
+  // Custom fields for BingeBuddy
   watchlist     WatchlistItem[]
   preferences   UserPreferences?
   recentlyViewed RecentlyViewed[]
@@ -67,7 +67,7 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// Flixora Custom Models
+// BingeBuddy Custom Models
 model WatchlistItem {
   id        String   @id @default(cuid())
   userId    String

@@ -22,13 +22,13 @@ export function Footer() {
               className="flex items-center gap-2 text-white font-display font-bold text-xl mb-4"
             >
               <Image
-                src="/images/flixora-logo.png"
-                alt="Flixora"
+                src="/images/bingebuddy-logo.png"
+                alt="BingeBuddy"
                 width={32}
                 height={32}
                 className="w-8 h-8"
               />
-              Flixora
+              BingeBuddy
             </Link>
             <p className="text-gray-400 text-sm">
               Discover your next favorite movie with our AI-powered recommendations.
@@ -110,7 +110,7 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="pt-8 border-t border-dark-800 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-gray-500 text-sm">
-            © {currentYear} Flixora. This product uses the TMDB API but is not endorsed or certified by TMDB.
+            © {currentYear} BingeBuddy. This product uses the TMDB API but is not endorsed or certified by TMDB.
           </p>
           <div className="flex items-center gap-4">
             <a
