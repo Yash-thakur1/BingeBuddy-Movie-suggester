@@ -2,10 +2,9 @@
 
 import { Heart, ThumbsDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEngagement } from '@/hooks/useEngagement';
+import { useEngagement, type ReactionType } from '@/hooks/useEngagement';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { cn } from '@/lib/utils';
-import type { ReactionType } from '@/lib/firebase/engagement';
 
 // ============================================
 // Helpers

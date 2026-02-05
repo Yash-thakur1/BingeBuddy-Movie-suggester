@@ -1,48 +1,81 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  getEngagementCounts,
-  getUserReaction,
-  toggleReaction,
-  subscribeToEngagement,
-  type ReactionType,
-  type EngagementCounts,
-} from '@/lib/firebase/engagement';
 
 // ============================================
-// localStorage helpers for guest users
+// Types
 // ============================================
 
-const GUEST_REACTIONS_KEY = 'flixora-guest-reactions';
+export type ReactionType = 'like' | 'dislike';
 
-interface GuestReactions {
-  [docId: string]: ReactionType;
+export interface EngagementCounts {
+  likes: number;
+  dislikes: number;
 }
 
-function getGuestReactions(): GuestReactions {
-  if (typeof window === 'undefined') return {};
+// ============================================
+// Stable visitor ID (auth UID for logged-in, random for guests)
+// ============================================
+
+const GUEST_ID_KEY = 'flixora-guest-id';
+
+function getOrCreateGuestId(): string {
+  if (typeof window === 'undefined') return '';
+  let id = localStorage.getItem(GUEST_ID_KEY);
+  if (!id) {
+    id = 'guest_' + crypto.randomUUID();
+    localStorage.setItem(GUEST_ID_KEY, id);
+  }
+  return id;
+}
+
+// ============================================
+// API helpers
+// ============================================
+
+interface APIResponse {
+  counts: EngagementCounts;
+  userReaction: ReactionType | null;
+}
+
+interface ToggleResponse {
+  reaction: ReactionType | null;
+  counts: EngagementCounts;
+}
+
+async function fetchEngagement(
+  mediaType: 'movie' | 'tv',
+  mediaId: number,
+  visitorId: string,
+): Promise<APIResponse> {
   try {
-    return JSON.parse(localStorage.getItem(GUEST_REACTIONS_KEY) || '{}');
-  } catch {
-    return {};
+    const params = new URLSearchParams({
+      mediaType,
+      mediaId: String(mediaId),
+      visitorId,
+    });
+    const res = await fetch(`/api/engagement?${params}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error('[useEngagement] fetch failed:', err);
+    return { counts: { likes: 0, dislikes: 0 }, userReaction: null };
   }
 }
 
-function setGuestReaction(mediaType: 'movie' | 'tv', mediaId: number, reaction: ReactionType | null) {
-  const key = `${mediaType}_${mediaId}`;
-  const reactions = getGuestReactions();
-  if (reaction) {
-    reactions[key] = reaction;
-  } else {
-    delete reactions[key];
-  }
-  localStorage.setItem(GUEST_REACTIONS_KEY, JSON.stringify(reactions));
-}
-
-function getGuestReaction(mediaType: 'movie' | 'tv', mediaId: number): ReactionType | null {
-  const key = `${mediaType}_${mediaId}`;
-  return getGuestReactions()[key] ?? null;
+async function postToggle(
+  mediaType: 'movie' | 'tv',
+  mediaId: number,
+  visitorId: string,
+  reaction: ReactionType,
+): Promise<ToggleResponse> {
+  const res = await fetch('/api/engagement', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mediaType, mediaId, visitorId, reaction }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return await res.json();
 }
 
 // ============================================
@@ -52,7 +85,7 @@ function getGuestReaction(mediaType: 'movie' | 'tv', mediaId: number): ReactionT
 interface UseEngagementOptions {
   mediaType: 'movie' | 'tv';
   mediaId: number;
-  userId?: string | null; // null → guest
+  userId?: string | null; // Firebase UID — null means guest
 }
 
 interface UseEngagementReturn {
@@ -62,6 +95,9 @@ interface UseEngagementReturn {
   isToggling: boolean;
   toggle: (reaction: ReactionType) => Promise<void>;
 }
+
+/** Polling interval for live counter refresh (ms) */
+const POLL_INTERVAL = 8_000;
 
 export function useEngagement({
   mediaType,
@@ -73,53 +109,49 @@ export function useEngagement({
   const [isLoading, setIsLoading] = useState(true);
   const [isToggling, setIsToggling] = useState(false);
 
-  // Keep latest values in refs for the toggle callback
+  // Stable visitor ID: Firebase UID when logged in, random guest ID otherwise
+  const visitorId = userId || (typeof window !== 'undefined' ? getOrCreateGuestId() : '');
+
+  // Refs for optimistic rollback
   const countsRef = useRef(counts);
   countsRef.current = counts;
   const userReactionRef = useRef(userReaction);
   userReactionRef.current = userReaction;
 
-  // ---- initial fetch + real-time subscription ----
+  // ---- initial fetch + polling for live updates ----
   useEffect(() => {
+    if (!visitorId) return;
+
     let cancelled = false;
+    let timer: ReturnType<typeof setInterval> | null = null;
 
-    async function init() {
-      setIsLoading(true);
-
-      // Fetch counts
-      const initialCounts = await getEngagementCounts(mediaType, mediaId);
-      if (!cancelled) setCounts(initialCounts);
-
-      // Fetch user reaction
-      if (userId) {
-        const existing = await getUserReaction(mediaType, mediaId, userId);
-        if (!cancelled) setUserReaction(existing);
-      } else {
-        // Guest: read from localStorage
-        const guestReaction = getGuestReaction(mediaType, mediaId);
-        if (!cancelled) setUserReaction(guestReaction);
+    async function load() {
+      const data = await fetchEngagement(mediaType, mediaId, visitorId);
+      if (!cancelled) {
+        setCounts(data.counts);
+        setUserReaction(data.userReaction);
+        setIsLoading(false);
       }
-
-      if (!cancelled) setIsLoading(false);
     }
 
-    init();
+    // Initial load
+    load();
 
-    // Real-time listener for counters so other users' reactions appear live
-    const unsub = subscribeToEngagement(mediaType, mediaId, (updated) => {
-      if (!cancelled) setCounts(updated);
-    });
+    // Poll every few seconds so other users' reactions appear live
+    timer = setInterval(() => {
+      if (!cancelled) load();
+    }, POLL_INTERVAL);
 
     return () => {
       cancelled = true;
-      unsub();
+      if (timer) clearInterval(timer);
     };
-  }, [mediaType, mediaId, userId]);
+  }, [mediaType, mediaId, visitorId]);
 
-  // ---- toggle reaction (optimistic) ----
+  // ---- toggle (optimistic UI) ----
   const toggle = useCallback(
     async (reaction: ReactionType) => {
-      if (isToggling) return;
+      if (isToggling || !visitorId) return;
       setIsToggling(true);
 
       const prevCounts = { ...countsRef.current };
@@ -130,12 +162,10 @@ export function useEngagement({
       const nextCounts = { ...prevCounts };
 
       if (prevReaction === reaction) {
-        // Un-react
         nextReaction = null;
         if (reaction === 'like') nextCounts.likes = Math.max(0, nextCounts.likes - 1);
         else nextCounts.dislikes = Math.max(0, nextCounts.dislikes - 1);
       } else if (prevReaction && prevReaction !== reaction) {
-        // Switch
         nextReaction = reaction;
         if (reaction === 'like') {
           nextCounts.likes += 1;
@@ -145,34 +175,30 @@ export function useEngagement({
           nextCounts.likes = Math.max(0, nextCounts.likes - 1);
         }
       } else {
-        // New
         nextReaction = reaction;
         if (reaction === 'like') nextCounts.likes += 1;
         else nextCounts.dislikes += 1;
       }
 
-      // Apply optimistic update immediately
+      // Apply optimistic update
       setUserReaction(nextReaction);
       setCounts(nextCounts);
 
       try {
-        if (userId) {
-          // Persist to Firestore
-          await toggleReaction(mediaType, mediaId, userId, reaction);
-        } else {
-          // Guest: persist to localStorage only
-          setGuestReaction(mediaType, mediaId, nextReaction);
-        }
+        // Persist via API route → Admin SDK (bypasses Firestore security rules)
+        const result = await postToggle(mediaType, mediaId, visitorId, reaction);
+        // Sync with server truth
+        setCounts(result.counts);
+        setUserReaction(result.reaction);
       } catch (error) {
         console.error('[useEngagement] toggle failed, rolling back:', error);
-        // Rollback
         setUserReaction(prevReaction);
         setCounts(prevCounts);
       } finally {
         setIsToggling(false);
       }
     },
-    [mediaType, mediaId, userId, isToggling],
+    [mediaType, mediaId, visitorId, isToggling],
   );
 
   return { counts, userReaction, isLoading, isToggling, toggle };
