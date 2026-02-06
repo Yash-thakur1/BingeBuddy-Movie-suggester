@@ -1,5 +1,12 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { Button } from '@/components/ui';
+
+export const metadata: Metadata = {
+  title: 'Page Not Found',
+  description: 'The page you are looking for could not be found. Discover movies and TV shows on BingeBuddy.',
+  robots: { index: false, follow: true },
+};
 
 export default function NotFound() {
   return (
@@ -21,6 +28,13 @@ export default function NotFound() {
             <Button variant="secondary">Discover Movies</Button>
           </Link>
         </div>
+
+        {/* Additional crawlable links for recovery */}
+        <nav className="mt-8 flex flex-wrap justify-center gap-4 text-sm">
+          <Link href="/search" className="text-gray-500 hover:text-white transition-colors">Search</Link>
+          <Link href="/tv" className="text-gray-500 hover:text-white transition-colors">TV Shows</Link>
+          <Link href="/recommendations" className="text-gray-500 hover:text-white transition-colors">Recommendations</Link>
+        </nav>
       </div>
     </div>
   );

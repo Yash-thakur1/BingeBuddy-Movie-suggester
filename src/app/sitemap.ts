@@ -1,56 +1,67 @@
 import { MetadataRoute } from 'next';
-import { getTrendingMovies, getPopularMovies, getTopRatedMovies, getTrendingTVShows, getPopularTVShows } from '@/lib/tmdb';
+import {
+  getTrendingMovies,
+  getPopularMovies,
+  getTopRatedMovies,
+  getTrendingTVShows,
+  getPopularTVShows,
+  getTopRatedTVShows,
+} from '@/lib/tmdb';
 
 const SITE_URL = 'https://www.bingebuddy.in';
 
+export const revalidate = 3600; // Regenerate sitemap every hour
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const now = new Date();
+
   // Static pages with priorities
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: SITE_URL,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: 'daily',
       priority: 1.0,
     },
     {
       url: `${SITE_URL}/discover`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.9,
     },
     {
       url: `${SITE_URL}/search`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
       url: `${SITE_URL}/recommendations`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
       url: `${SITE_URL}/watchlist`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: 'weekly',
-      priority: 0.6,
+      priority: 0.5,
     },
     {
       url: `${SITE_URL}/tv`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.9,
     },
     {
       url: `${SITE_URL}/tv/discover`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.8,
     },
     {
       url: `${SITE_URL}/tv/recommendations`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.7,
     },
@@ -75,7 +86,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     movieUrls = Array.from(movieIds).map((id) => ({
       url: `${SITE_URL}/movie/${id}`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: 'weekly' as const,
       priority: 0.7,
     }));
@@ -84,17 +95,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   try {
-    const [trendingTV, popularTV] = await Promise.all([
+    const [trendingTV, popularTV, topRatedTV] = await Promise.all([
       getTrendingTVShows('week'),
       getPopularTVShows(),
+      getTopRatedTVShows(),
     ]);
 
     const tvIds = new Set<number>();
-    [...trendingTV.results, ...popularTV.results].forEach((s) => tvIds.add(s.id));
+    [...trendingTV.results, ...popularTV.results, ...topRatedTV.results].forEach((s) =>
+      tvIds.add(s.id)
+    );
 
     tvUrls = Array.from(tvIds).map((id) => ({
       url: `${SITE_URL}/tv/${id}`,
-      lastModified: new Date(),
+      lastModified: now,
       changeFrequency: 'weekly' as const,
       priority: 0.6,
     }));

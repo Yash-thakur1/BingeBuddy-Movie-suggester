@@ -4,8 +4,16 @@ import { Github, Twitter } from 'lucide-react';
 
 /**
  * Footer Component
- * Site footer with branding and credits
+ * Compact site footer with crawlable navigation links
  */
+
+const footerLinks = [
+  { href: '/discover', label: 'Discover' },
+  { href: '/search', label: 'Search' },
+  { href: '/tv', label: 'TV Shows' },
+  { href: '/recommendations', label: 'For You' },
+  { href: '/watchlist', label: 'Watchlist' },
+];
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -13,7 +21,7 @@ export function Footer() {
   return (
     <footer className="bg-dark-900 border-t border-dark-800">
       <div className="container mx-auto px-4 md:px-8 py-4">
-        <div className="flex flex-col items-center gap-2">
+        <div className="flex flex-col items-center gap-3">
           {/* Brand row */}
           <Link
             href="/"
@@ -29,11 +37,20 @@ export function Footer() {
             BingeBuddy
           </Link>
 
-          {/* Tagline + copyright + socials in a tight cluster */}
-          <p className="text-gray-500 text-xs">
-            AI-powered movie recommendations
-          </p>
+          {/* Site-wide navigation links — critical for crawlability */}
+          <nav aria-label="Footer navigation" className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+            {footerLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-gray-500 hover:text-white text-xs transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
 
+          {/* Copyright + socials */}
           <div className="flex items-center gap-3 text-gray-500 text-xs">
             <span>© {currentYear} BingeBuddy</span>
             <span className="text-dark-700">·</span>

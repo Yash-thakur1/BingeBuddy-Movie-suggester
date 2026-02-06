@@ -86,19 +86,26 @@ export default function HomePage() {
 
         {/* Internal Navigation Links */}
         <section className="py-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <a href="/discover" className="group flex items-center gap-3 p-4 rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
               <span className="text-2xl">🎬</span>
               <div>
-                <p className="text-white text-sm font-medium group-hover:text-primary-400 transition-colors">Discover Movies</p>
-                <p className="text-gray-500 text-xs">Browse by genre & year</p>
+                <p className="text-white text-sm font-medium group-hover:text-primary-400 transition-colors">Discover</p>
+                <p className="text-gray-500 text-xs">Browse by genre</p>
+              </div>
+            </a>
+            <a href="/search" className="group flex items-center gap-3 p-4 rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
+              <span className="text-2xl">🔍</span>
+              <div>
+                <p className="text-white text-sm font-medium group-hover:text-primary-400 transition-colors">Search</p>
+                <p className="text-gray-500 text-xs">Find any title</p>
               </div>
             </a>
             <a href="/tv" className="group flex items-center gap-3 p-4 rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
               <span className="text-2xl">📺</span>
               <div>
                 <p className="text-white text-sm font-medium group-hover:text-primary-400 transition-colors">TV Series</p>
-                <p className="text-gray-500 text-xs">Trending & top rated shows</p>
+                <p className="text-gray-500 text-xs">Top rated shows</p>
               </div>
             </a>
             <a href="/recommendations" className="group flex items-center gap-3 p-4 rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
