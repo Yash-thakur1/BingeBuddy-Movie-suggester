@@ -7,6 +7,7 @@ import {
   signInWithEmail,
   signUpWithEmail,
   signInWithGoogle,
+  handleGoogleRedirectResult,
   firebaseSignOut,
   getIdToken,
 } from '@/lib/firebase';
@@ -67,6 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Listen to Firebase auth state changes
   useEffect(() => {
+    // Handle any pending Google redirect result
+    handleGoogleRedirectResult().catch(() => {});
+
     const unsubscribe = onAuthStateChange(async (firebaseUser) => {
       if (firebaseUser) {
         const token = await getIdToken();

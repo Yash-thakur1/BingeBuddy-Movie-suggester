@@ -13,6 +13,7 @@ export {
   signInWithEmail,
   signUpWithEmail,
   signInWithGoogle,
+  handleGoogleRedirectResult,
   firebaseSignOut,
   sendPasswordReset,
   getCurrentUser,

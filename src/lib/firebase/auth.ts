@@ -9,6 +9,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
@@ -77,14 +79,49 @@ export async function signUpWithEmail(
 
 /**
  * Sign in with Google
+ * Tries popup first; falls back to redirect if popup is blocked.
  */
 export async function signInWithGoogle(): Promise<{ user: User | null; error: string | null }> {
   try {
     const auth = getFirebaseAuth();
+    // Try popup first (works on most desktops)
     const result = await signInWithPopup(auth, googleProvider);
     return { user: result.user, error: null };
   } catch (error: any) {
+    // If popup was blocked or unavailable, fall back to redirect
+    if (
+      error.code === 'auth/popup-blocked' ||
+      error.code === 'auth/operation-not-supported-in-this-environment'
+    ) {
+      try {
+        const auth = getFirebaseAuth();
+        await signInWithRedirect(auth, googleProvider);
+        // signInWithRedirect navigates away, so this line won't be reached
+        return { user: null, error: null };
+      } catch (redirectError: any) {
+        console.error('[Firebase Auth] Google redirect error:', redirectError);
+        return { user: null, error: getAuthErrorMessage(redirectError.code) };
+      }
+    }
     console.error('[Firebase Auth] Google sign in error:', error);
+    return { user: null, error: getAuthErrorMessage(error.code) };
+  }
+}
+
+/**
+ * Handle Google redirect result on page load.
+ * Call this once when the app initializes.
+ */
+export async function handleGoogleRedirectResult(): Promise<{ user: User | null; error: string | null }> {
+  try {
+    const auth = getFirebaseAuth();
+    const result = await getRedirectResult(auth);
+    if (result?.user) {
+      return { user: result.user, error: null };
+    }
+    return { user: null, error: null };
+  } catch (error: any) {
+    console.error('[Firebase Auth] Redirect result error:', error);
     return { user: null, error: getAuthErrorMessage(error.code) };
   }
 }
@@ -162,7 +199,7 @@ function getAuthErrorMessage(code: string): string {
     case 'auth/invalid-email':
       return 'Please enter a valid email address.';
     case 'auth/operation-not-allowed':
-      return 'This sign-in method is not enabled. Please contact support.';
+      return 'Google sign-in is not enabled. Please enable it in Firebase Console under Authentication > Sign-in method.';
     case 'auth/weak-password':
       return 'Password should be at least 6 characters.';
     case 'auth/user-disabled':
@@ -177,10 +214,18 @@ function getAuthErrorMessage(code: string): string {
       return 'Too many failed attempts. Please try again later.';
     case 'auth/popup-closed-by-user':
       return 'Sign-in was cancelled. Please try again.';
+    case 'auth/popup-blocked':
+      return 'Popup was blocked by your browser. Trying redirect instead...';
+    case 'auth/unauthorized-domain':
+      return 'This domain is not authorized for Google sign-in. Add it in Firebase Console > Authentication > Settings > Authorized domains.';
     case 'auth/network-request-failed':
       return 'Network error. Please check your connection.';
+    case 'auth/cancelled-popup-request':
+      return 'Sign-in was cancelled. Please try again.';
+    case 'auth/internal-error':
+      return 'An internal error occurred. Please try again.';
     default:
-      return 'An error occurred. Please try again.';
+      return `Authentication error (${code || 'unknown'}). Please try again.`;
   }
 }
 
