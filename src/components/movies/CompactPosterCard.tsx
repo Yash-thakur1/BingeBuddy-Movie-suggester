@@ -22,6 +22,8 @@ interface CompactPosterCardProps {
   /** Load image eagerly for above-fold content */
   priority?: boolean;
   className?: string;
+  /** When true, render as a div instead of a Link so parent can handle clicks */
+  disableLink?: boolean;
 }
 
 export function CompactPosterCard({
@@ -29,6 +31,7 @@ export function CompactPosterCard({
   tvShow,
   priority = false,
   className,
+  disableLink = false,
 }: CompactPosterCardProps) {
   const item = movie || tvShow;
   if (!item) return null;
@@ -39,8 +42,8 @@ export function CompactPosterCard({
   const posterPath = item.poster_path;
   const rating = item.vote_average;
 
-  return (
-    <Link href={href} className={cn('block group', className)} prefetch={false}>
+  const cardContent = (
+    <>
       <div
         className={cn(
           'relative aspect-[2/3] rounded-lg overflow-hidden bg-dark-800',
@@ -92,6 +95,16 @@ export function CompactPosterCard({
       <p className="mt-1.5 text-xs text-gray-300 line-clamp-1 px-0.5 leading-tight">
         {title}
       </p>
+    </>
+  );
+
+  if (disableLink) {
+    return <div className={cn('block group', className)}>{cardContent}</div>;
+  }
+
+  return (
+    <Link href={href} className={cn('block group', className)} prefetch={false}>
+      {cardContent}
     </Link>
   );
 }

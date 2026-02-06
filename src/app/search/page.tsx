@@ -5,6 +5,7 @@ import { CompactPosterGrid } from '@/components/movies';
 import { MovieGridSkeleton } from '@/components/ui';
 import { SearchBar } from '@/components/layout';
 import { Movie, TVShow, isMovie, isTVShow } from '@/types/movie';
+import { SearchMovieResults } from './SearchMovieResults';
 
 export const metadata: Metadata = {
   title: 'Search Movies & TV Shows',
@@ -30,18 +31,17 @@ async function SearchResults({ query, page, type }: { query: string; page: numbe
 
   // Fetch based on type filter
   if (type === 'movie') {
-    const results = await searchMovies(query, page);
+    const results = await searchMovies(query, 1);
     if (results.results.length === 0) {
       return <NoResults />;
     }
     return (
-      <>
-        <p className="text-gray-400 mb-6">
-          Found {results.total_results.toLocaleString()} movies for &ldquo;{query}&rdquo;
-        </p>
-        <CompactPosterGrid movies={results.results} />
-        <Pagination query={query} page={page} totalPages={results.total_pages} type={type} />
-      </>
+      <SearchMovieResults
+        query={query}
+        initialMovies={results.results}
+        totalResults={results.total_results}
+        totalPages={results.total_pages}
+      />
     );
   }
 

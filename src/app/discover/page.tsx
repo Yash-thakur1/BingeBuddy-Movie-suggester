@@ -1,9 +1,9 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { discoverMovies } from '@/lib/tmdb';
-import { CompactPosterGrid } from '@/components/movies';
 import { MovieGridSkeleton } from '@/components/ui';
 import { DiscoverFilters } from './DiscoverFilters';
+import { DiscoverResults } from './DiscoverResults';
 
 export const metadata: Metadata = {
   title: 'Discover Movies',
@@ -20,13 +20,12 @@ interface DiscoverPageProps {
 }
 
 async function DiscoverContent({ searchParams }: DiscoverPageProps) {
-  const page = parseInt(searchParams.page || '1');
   const genreIds = searchParams.genre?.split(',').map(Number).filter(Boolean) || [];
   const year = searchParams.year ? parseInt(searchParams.year) : undefined;
   const sortBy = (searchParams.sort as string) || '';
 
   const movies = await discoverMovies({
-    page,
+    page: 1,
     with_genres: genreIds.length > 0 ? genreIds.join(',') : undefined,
     primary_release_year: year,
     ...(sortBy ? { sort_by: sortBy as any } : {}),
@@ -34,46 +33,11 @@ async function DiscoverContent({ searchParams }: DiscoverPageProps) {
   });
 
   return (
-    <>
-      <div className="mb-4">
-        <p className="text-sm text-gray-400">
-          Found {movies.total_results.toLocaleString()} movies
-        </p>
-      </div>
-
-      <CompactPosterGrid movies={movies.results} />
-
-      {/* Pagination */}
-      {movies.total_pages > 1 && (
-        <div className="mt-8 flex justify-center gap-2">
-          {page > 1 && (
-            <a
-              href={`/discover?${new URLSearchParams({
-                ...searchParams,
-                page: String(page - 1),
-              })}`}
-              className="px-4 py-2 bg-dark-800 text-white rounded-lg hover:bg-dark-700 transition-colors"
-            >
-              Previous
-            </a>
-          )}
-          <span className="px-4 py-2 text-gray-400">
-            Page {page} of {Math.min(movies.total_pages, 500)}
-          </span>
-          {page < Math.min(movies.total_pages, 500) && (
-            <a
-              href={`/discover?${new URLSearchParams({
-                ...searchParams,
-                page: String(page + 1),
-              })}`}
-              className="px-4 py-2 bg-dark-800 text-white rounded-lg hover:bg-dark-700 transition-colors"
-            >
-              Next
-            </a>
-          )}
-        </div>
-      )}
-    </>
+    <DiscoverResults
+      initialMovies={movies.results}
+      totalResults={movies.total_results}
+      totalPages={movies.total_pages}
+    />
   );
 }
 
@@ -92,7 +56,7 @@ export default function DiscoverPage({ searchParams }: DiscoverPageProps) {
       {/* Filters */}
       <DiscoverFilters />
 
-      {/* Results */}
+      {/* Results with infinite scroll + preview */}
       <Suspense fallback={<MovieGridSkeleton />}>
         <DiscoverContent searchParams={searchParams} />
       </Suspense>
