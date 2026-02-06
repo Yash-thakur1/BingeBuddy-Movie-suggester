@@ -173,8 +173,12 @@ export default function SignUpPage() {
     setError('');
     try {
       await loginWithGoogle('/');
-    } catch {
-      setError('Google sign-in failed. Please try again.');
+    } catch (err: any) {
+      const msg = err?.message || '';
+      // Don't show error if user simply closed the popup
+      if (!msg.includes('popup-closed-by-user') && !msg.includes('cancelled')) {
+        setError(msg || 'Google sign-in failed. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }

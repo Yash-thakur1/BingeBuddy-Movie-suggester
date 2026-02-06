@@ -122,12 +122,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * Login with Google via Firebase Auth popup
    */
   const loginWithGoogle = useCallback(async (_callbackUrl: string = '/') => {
-    try {
-      await signInWithGoogle();
-      // onAuthStateChanged will handle session update
-    } catch (error) {
-      console.error('[Auth] Google login failed:', error);
+    const { user, error } = await signInWithGoogle();
+    if (error || !user) {
+      throw new Error(error || 'Google sign-in failed');
     }
+    // onAuthStateChanged will handle session update
   }, []);
 
   /**
