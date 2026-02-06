@@ -2,8 +2,18 @@ import type { Metadata } from 'next';
 import { PreferenceWizard } from '@/components/features';
 
 export const metadata: Metadata = {
-  title: 'Get Recommendations',
-  description: 'Get personalized movie recommendations based on your preferences.',
+  title: 'AI Movie Recommendations - Personalized Just for You',
+  description:
+    'Get personalized movie recommendations powered by AI. Tell us your mood, favorite genres, and preferences — we\'ll find the perfect films for your next watch session.',
+  alternates: {
+    canonical: '/recommendations',
+  },
+  openGraph: {
+    title: 'AI Movie Recommendations - Personalized Just for You',
+    description:
+      'Get AI-powered movie recommendations based on your mood, genres, and preferences.',
+    url: '/recommendations',
+  },
 };
 
 export default function RecommendationsPage() {

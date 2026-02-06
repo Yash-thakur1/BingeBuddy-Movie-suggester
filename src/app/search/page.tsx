@@ -8,8 +8,18 @@ import { Movie, TVShow, isMovie, isTVShow } from '@/types/movie';
 import { SearchMovieResults } from './SearchMovieResults';
 
 export const metadata: Metadata = {
-  title: 'Search Movies & TV Shows',
-  description: 'Search for movies and TV shows by title.',
+  title: 'Search Movies & TV Shows - Find Any Title',
+  description:
+    'Search our database of movies and TV shows by title. Instantly find details, ratings, trailers, and streaming availability for any film or series.',
+  alternates: {
+    canonical: '/search',
+  },
+  openGraph: {
+    title: 'Search Movies & TV Shows',
+    description:
+      'Search our database of movies and TV shows. Find details, ratings, trailers, and streaming availability instantly.',
+    url: '/search',
+  },
 };
 
 interface SearchPageProps {

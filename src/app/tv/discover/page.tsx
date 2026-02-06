@@ -6,8 +6,18 @@ import { MovieGridSkeleton } from '@/components/ui';
 import { TVDiscoverFilters } from './TVDiscoverFilters';
 
 export const metadata: Metadata = {
-  title: 'Discover TV Series',
-  description: 'Browse and discover TV shows by genre, year, rating, and more.',
+  title: 'Discover TV Series - Browse Shows by Genre & Rating',
+  description:
+    'Explore TV series filtered by genre, year, and rating. Find binge-worthy dramas, comedies, thrillers, and more from every streaming platform.',
+  alternates: {
+    canonical: '/tv/discover',
+  },
+  openGraph: {
+    title: 'Discover TV Series - Browse Shows by Genre & Rating',
+    description:
+      'Explore TV series filtered by genre, year, and rating. Find your next binge-worthy show.',
+    url: '/tv/discover',
+  },
 };
 
 interface DiscoverPageProps {

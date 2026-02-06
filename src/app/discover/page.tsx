@@ -6,8 +6,18 @@ import { DiscoverFilters } from './DiscoverFilters';
 import { DiscoverResults } from './DiscoverResults';
 
 export const metadata: Metadata = {
-  title: 'Discover Movies',
-  description: 'Browse and discover movies by genre, year, rating, and more.',
+  title: 'Discover Movies - Browse by Genre, Year & Rating',
+  description:
+    'Explore thousands of movies filtered by genre, release year, and rating. Find hidden gems, blockbusters, and critically acclaimed films all in one place.',
+  alternates: {
+    canonical: '/discover',
+  },
+  openGraph: {
+    title: 'Discover Movies - Browse by Genre, Year & Rating',
+    description:
+      'Explore thousands of movies filtered by genre, release year, and rating. Find your next favorite film.',
+    url: '/discover',
+  },
 };
 
 interface DiscoverPageProps {

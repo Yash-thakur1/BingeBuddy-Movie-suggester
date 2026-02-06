@@ -1,9 +1,25 @@
 import { Suspense } from 'react';
+import type { Metadata } from 'next';
 import { getTrendingTVShows, getPopularTVShows, getTopRatedTVShows, getAiringTodayTVShows, getTVShowVideos } from '@/lib/tmdb';
 import { TVHeroSection } from '@/components/features';
 import { TVShowCarousel, CompactPosterSection } from '@/components/movies';
 import { HeroSkeleton, MovieGridSkeleton } from '@/components/ui';
 import { TVQuickMoodsSection } from './TVQuickMoodsSection';
+
+export const metadata: Metadata = {
+  title: 'TV Shows - Trending, Popular & Top Rated Series',
+  description:
+    'Browse trending TV shows, top-rated series, and shows airing today. Discover your next binge-worthy show with AI-powered recommendations on BingeBuddy.',
+  alternates: {
+    canonical: '/tv',
+  },
+  openGraph: {
+    title: 'TV Shows - Trending, Popular & Top Rated Series',
+    description:
+      'Browse trending TV shows, top-rated series, and shows airing today. Find your next binge.',
+    url: '/tv',
+  },
+};
 
 export const revalidate = 3600; // Revalidate every hour
 

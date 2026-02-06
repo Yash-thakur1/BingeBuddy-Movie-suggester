@@ -7,8 +7,10 @@ import { CompactPosterGrid } from '@/components/movies';
 import { MovieGridSkeleton, Button } from '@/components/ui';
 
 export const metadata: Metadata = {
-  title: 'Your Recommendations',
-  description: 'Personalized movie recommendations based on your preferences.',
+  title: 'Your Movie Recommendations',
+  description:
+    'Your personalized movie recommendations curated by AI based on your mood, genre preferences, and viewing history.',
+  robots: { index: false, follow: true },
 };
 
 interface ResultsPageProps {

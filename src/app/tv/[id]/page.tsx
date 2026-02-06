@@ -29,13 +29,32 @@ export async function generateMetadata({ params }: TVShowPageProps): Promise<Met
   try {
     const show = await getTVShowDetails(parseInt(params.id));
     const year = show.first_air_date ? new Date(show.first_air_date).getFullYear() : 'TBA';
+    const title = `${show.name} (${year}) - TV Series`;
+    const description = show.overview
+      ? show.overview.length > 155
+        ? show.overview.substring(0, 152) + '...'
+        : show.overview
+      : `Watch ${show.name} — find ratings, trailers, cast, and streaming availability on BingeBuddy.`;
+    const posterUrl = getImageUrl(show.poster_path, 'w500');
+
     return {
-      title: `${show.name} (${year}) - TV Series`,
-      description: show.overview,
+      title,
+      description,
+      alternates: {
+        canonical: `/tv/${params.id}`,
+      },
       openGraph: {
-        title: show.name,
-        description: show.overview,
-        images: [getImageUrl(show.poster_path, 'w500')],
+        title: `${show.name} (${year}) - TV Series Details & Trailers`,
+        description,
+        url: `/tv/${params.id}`,
+        type: 'video.tv_show',
+        images: posterUrl ? [{ url: posterUrl, width: 500, height: 750, alt: show.name }] : [],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `${show.name} (${year}) - TV Series`,
+        description,
+        images: posterUrl ? [posterUrl] : [],
       },
     };
   } catch {

@@ -22,24 +22,38 @@ const outfit = Outfit({
   variable: '--font-outfit',
 });
 
+const SITE_URL = 'https://www.bingebuddy.in';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'BingeBuddy - Discover Your Next Favorite Movie',
+    default: 'BingeBuddy - AI Movie & TV Show Recommendations | Discover What to Watch',
     template: '%s | BingeBuddy',
   },
   description:
-    'Discover movies tailored to your taste with our AI-powered recommendation engine. Browse trending, popular, and critically acclaimed films.',
+    'BingeBuddy is your AI-powered movie and TV show recommendation engine. Discover trending films, get personalized suggestions by mood and genre, build your watchlist, and never run out of things to watch.',
   keywords: [
-    'movies',
-    'bingebuddy',
     'movie recommendations',
-    'film discovery',
+    'TV show recommendations',
+    'what to watch',
+    'AI movie suggestions',
+    'trending movies 2026',
+    'best movies',
+    'best TV shows',
+    'movie discovery',
+    'personalized recommendations',
+    'watchlist',
     'movie database',
-    'trending movies',
-    'watch movies',
+    'bingebuddy',
+    'streaming guide',
+    'mood-based recommendations',
   ],
   authors: [{ name: 'Yash Kumar' }],
   creator: 'BingeBuddy',
+  publisher: 'BingeBuddy',
+  alternates: {
+    canonical: SITE_URL,
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -55,30 +69,37 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://flixora-movie-suggester.vercel.app',
+    url: SITE_URL,
     siteName: 'BingeBuddy',
-    title: 'BingeBuddy - Discover Your Next Favorite Movie',
+    title: 'BingeBuddy - AI Movie & TV Show Recommendations',
     description:
-      'Discover movies tailored to your taste with our AI-powered recommendation engine.',
+      'Discover movies and TV shows tailored to your taste. Get AI-powered recommendations by mood, genre, and preferences. Build your watchlist today.',
     images: [
       {
         url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'BingeBuddy',
+        alt: 'BingeBuddy - Discover Your Next Favorite Movie',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'BingeBuddy - Discover Your Next Favorite Movie',
+    title: 'BingeBuddy - AI Movie & TV Show Recommendations',
     description:
-      'Discover movies tailored to your taste with our AI-powered recommendation engine.',
+      'Discover movies and TV shows tailored to your taste. AI-powered recommendations by mood, genre, and preferences.',
     images: ['/og-image.jpg'],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 
