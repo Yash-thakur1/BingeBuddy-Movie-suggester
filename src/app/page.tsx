@@ -8,16 +8,14 @@ import {
   getMoviesByGenre,
   getMovieVideos,
 } from '@/lib/tmdb';
-import { HeroSection } from '@/components/features';
+import { HeroCarousel, HeroCarouselSkeleton } from '@/components/features';
 import { ContentRail, ContentRailSkeleton } from '@/components/movies';
-import { HeroSkeleton } from '@/components/ui';
-import { QuickMoodsSection } from './QuickMoodsSection';
 import { FAQSchema } from '@/components/seo';
 
 export const revalidate = 3600;
 
 /**
- * Home Page — Streaming-platform style dashboard with content rails.
+ * Home Page — Streaming-platform dashboard with hero carousel and content rails.
  */
 
 // Genre rail definitions
@@ -32,14 +30,27 @@ const GENRE_RAILS = [
   { id: 16, title: '🎨 Animation', description: 'Animated masterpieces', href: '/discover?genre=16' },
 ];
 
+/** Fetch hero items with trailers */
 async function HeroContent() {
   const trending = await getTrendingMovies('day');
-  const featuredMovie = trending.results[0];
-  const videos = await getMovieVideos(featuredMovie.id);
-  const trailer = videos.results.find(
-    (v) => v.site === 'YouTube' && v.type === 'Trailer'
+  const heroMovies = trending.results.slice(0, 6);
+
+  // Fetch trailers in parallel for first 6 items
+  const heroItems = await Promise.all(
+    heroMovies.map(async (movie) => {
+      try {
+        const videos = await getMovieVideos(movie.id);
+        const trailer = videos.results.find(
+          (v) => v.site === 'YouTube' && v.type === 'Trailer'
+        );
+        return { movie, trailerKey: trailer?.key || null };
+      } catch {
+        return { movie, trailerKey: null };
+      }
+    })
   );
-  return <HeroSection movie={featuredMovie} trailerKey={trailer?.key} />;
+
+  return <HeroCarousel items={heroItems} />;
 }
 
 /** New Releases rail (now playing + upcoming) — auto-slides */
@@ -49,7 +60,6 @@ async function NewReleasesRail() {
     getUpcomingMovies(),
   ]);
 
-  // Merge and deduplicate, take 15
   const seen = new Set<number>();
   const merged = [...nowPlaying.results, ...upcoming.results].filter((m) => {
     if (seen.has(m.id)) return false;
@@ -69,7 +79,6 @@ async function NewReleasesRail() {
   );
 }
 
-/** Trending This Week rail */
 async function TrendingRail() {
   const trending = await getTrendingMovies('week');
   return (
@@ -82,7 +91,6 @@ async function TrendingRail() {
   );
 }
 
-/** Popular Movies rail */
 async function PopularRail() {
   const popular = await getPopularMovies();
   return (
@@ -95,7 +103,6 @@ async function PopularRail() {
   );
 }
 
-/** Top Rated rail */
 async function TopRatedRail() {
   const topRated = await getTopRatedMovies();
   return (
@@ -108,7 +115,6 @@ async function TopRatedRail() {
   );
 }
 
-/** Single genre rail (server component) */
 async function GenreRail({ genreId, title, description, href }: {
   genreId: number;
   title: string;
@@ -129,17 +135,15 @@ async function GenreRail({ genreId, title, description, href }: {
 export default function HomePage() {
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <Suspense fallback={<HeroSkeleton />}>
+      {/* Hero Carousel */}
+      <Suspense fallback={<HeroCarouselSkeleton />}>
         <HeroContent />
       </Suspense>
 
-      {/* Main Content */}
+      {/* Content Rails */}
       <div className="container mx-auto px-4 md:px-8 -mt-16 relative z-10">
-        {/* Quick Mood Selection */}
-        <QuickMoodsSection />
 
-        {/* New Releases — auto-sliding rail */}
+        {/* New Releases */}
         <Suspense fallback={<ContentRailSkeleton />}>
           <NewReleasesRail />
         </Suspense>
@@ -159,7 +163,7 @@ export default function HomePage() {
           <TopRatedRail />
         </Suspense>
 
-        {/* Genre-based rails */}
+        {/* Genre Rails */}
         {GENRE_RAILS.map((genre) => (
           <Suspense key={genre.id} fallback={<ContentRailSkeleton />}>
             <GenreRail

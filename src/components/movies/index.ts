@@ -18,6 +18,9 @@ export { ContentRail, ContentRailSkeleton } from './ContentRail';
 export { RailCard } from './RailCard';
 export { HoverPreview } from './HoverPreview';
 
+// Infinite TV grid
+export { InfiniteTVGrid, InfiniteTVGridSkeleton } from './InfiniteTVGrid';
+
 // TV Show exports
 export { TVShowCard, TVShowCardHorizontal } from './TVShowCard';
 export { TVShowGrid, TVShowSection, TVShowCarousel } from './TVShowGrid';

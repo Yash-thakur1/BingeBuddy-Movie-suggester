@@ -1,0 +1,318 @@
+'use client';
+
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight, Play, Info, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Movie, TVShow } from '@/types/movie';
+import { getImageUrl, getYear, getGenreName, getTVGenreName } from '@/lib/tmdb';
+import { Button, RatingBadge, Badge } from '@/components/ui';
+import { useWatchlistStore, useUIStore } from '@/store';
+import { cn } from '@/lib/utils';
+
+/**
+ * HeroCarousel — Full-width streaming-style hero carousel.
+ * Supports both Movie and TVShow items.
+ * • Auto-slides every 3s in a circular loop
+ * • Pause on hover / focus / interaction
+ * • Left/right arrows + dot indicators
+ * • GPU-accelerated transitions
+ * • Responsive + keyboard navigable
+ */
+
+interface HeroItem {
+  movie?: Movie;
+  tvShow?: TVShow;
+  trailerKey?: string | null;
+}
+
+interface HeroCarouselProps {
+  items: HeroItem[];
+  className?: string;
+}
+
+export const HeroCarousel = memo(function HeroCarousel({
+  items,
+  className,
+}: HeroCarouselProps) {
+  const [current, setCurrent] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const total = items.length;
+
+  const goTo = useCallback(
+    (index: number) => {
+      if (isTransitioning) return;
+      setIsTransitioning(true);
+      setCurrent(((index % total) + total) % total);
+      setTimeout(() => setIsTransitioning(false), 600);
+    },
+    [total, isTransitioning]
+  );
+
+  const next = useCallback(() => goTo(current + 1), [current, goTo]);
+  const prev = useCallback(() => goTo(current - 1), [current, goTo]);
+
+  // Auto-slide
+  useEffect(() => {
+    if (isPaused || total <= 1) return;
+    intervalRef.current = setInterval(next, 3000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isPaused, next, total]);
+
+  if (total === 0) return null;
+
+  const item = items[current];
+  const media = item.movie || item.tvShow;
+  if (!media) return null;
+
+  const isTV = !!item.tvShow;
+  const title = isTV ? (media as TVShow).name : (media as Movie).title;
+  const overview = media.overview;
+  const backdropPath = media.backdrop_path;
+  const rating = media.vote_average;
+  const date = isTV ? (media as TVShow).first_air_date : (media as Movie).release_date;
+  const genreIds = media.genre_ids || [];
+  const href = isTV ? `/tv/${media.id}` : `/movie/${media.id}`;
+
+  return (
+    <section
+      className={cn('relative h-[70vh] min-h-[500px] md:h-[80vh] md:min-h-[600px] w-full overflow-hidden', className)}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onFocus={() => setIsPaused(true)}
+      onBlur={() => setIsPaused(false)}
+      role="region"
+      aria-label="Featured content carousel"
+      aria-roledescription="carousel"
+    >
+      {/* Slides */}
+      {items.map((slideItem, index) => {
+        const slideMedia = slideItem.movie || slideItem.tvShow;
+        if (!slideMedia) return null;
+        const isActive = index === current;
+
+        return (
+          <div
+            key={slideMedia.id}
+            className={cn(
+              'absolute inset-0 transition-opacity duration-700 ease-in-out',
+              isActive ? 'opacity-100 z-10' : 'opacity-0 z-0'
+            )}
+            style={{ willChange: 'opacity' }}
+            role="group"
+            aria-roledescription="slide"
+            aria-label={`Slide ${index + 1} of ${total}`}
+            aria-hidden={!isActive}
+          >
+            <Image
+              src={getImageUrl(slideMedia.backdrop_path, 'original')}
+              alt=""
+              fill
+              className="object-cover"
+              priority={index < 2}
+              sizes="100vw"
+              loading={index < 2 ? 'eager' : 'lazy'}
+            />
+            {/* Gradients */}
+            <div className="absolute inset-0 bg-gradient-to-r from-dark-950 via-dark-950/60 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-dark-950 via-transparent to-dark-950/20" />
+          </div>
+        );
+      })}
+
+      {/* Content overlay */}
+      <div className="relative z-20 h-full container mx-auto px-4 md:px-8 flex items-end pb-20 md:pb-28">
+        <div
+          key={current}
+          className="max-w-2xl animate-fade-in-up"
+        >
+          {/* Type badge */}
+          {isTV && (
+            <Badge variant="primary" className="mb-3">
+              TV Series
+            </Badge>
+          )}
+
+          {/* Title */}
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-display font-bold text-white mb-3 leading-tight">
+            {title}
+          </h2>
+
+          {/* Meta info */}
+          <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-3">
+            {rating > 0 && <RatingBadge rating={rating} size="lg" />}
+            {date && <span className="text-gray-300 text-sm md:text-base">{getYear(date)}</span>}
+            {genreIds.length > 0 && (
+              <>
+                <span className="text-gray-500 hidden sm:inline">•</span>
+                <div className="hidden sm:flex gap-1.5">
+                  {genreIds.slice(0, 3).map((id) => (
+                    <Badge key={id} variant="genre">
+                      {isTV ? getTVGenreName(id) : getGenreName(id)}
+                    </Badge>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Overview */}
+          <p className="text-gray-300 text-sm md:text-base lg:text-lg line-clamp-2 md:line-clamp-3 mb-5">
+            {overview}
+          </p>
+
+          {/* Actions */}
+          <HeroActions item={item} href={href} />
+        </div>
+      </div>
+
+      {/* Left / Right arrows */}
+      {total > 1 && (
+        <>
+          <button
+            onClick={prev}
+            className={cn(
+              'absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-30',
+              'w-10 h-10 md:w-12 md:h-12 rounded-full',
+              'bg-dark-900/60 backdrop-blur-sm border border-dark-700/50',
+              'flex items-center justify-center text-white',
+              'hover:bg-dark-800 transition-colors',
+              'focus:outline-none focus:ring-2 focus:ring-primary-500'
+            )}
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+          </button>
+          <button
+            onClick={next}
+            className={cn(
+              'absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-30',
+              'w-10 h-10 md:w-12 md:h-12 rounded-full',
+              'bg-dark-900/60 backdrop-blur-sm border border-dark-700/50',
+              'flex items-center justify-center text-white',
+              'hover:bg-dark-800 transition-colors',
+              'focus:outline-none focus:ring-2 focus:ring-primary-500'
+            )}
+            aria-label="Next slide"
+          >
+            <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+          </button>
+        </>
+      )}
+
+      {/* Dot indicators */}
+      {total > 1 && (
+        <div className="absolute bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+          {items.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goTo(index)}
+              className={cn(
+                'h-1.5 rounded-full transition-all duration-300',
+                index === current
+                  ? 'w-8 bg-primary-500'
+                  : 'w-3 bg-white/30 hover:bg-white/50'
+              )}
+              aria-label={`Go to slide ${index + 1}`}
+              aria-current={index === current ? 'true' : undefined}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+});
+
+/** Hero action buttons — extracted to reduce re-renders */
+function HeroActions({ item, href }: { item: HeroItem; href: string }) {
+  const media = item.movie || item.tvShow;
+  const isTV = !!item.tvShow;
+
+  const addToWatchlist = useWatchlistStore((s) => s.addToWatchlist);
+  const removeFromWatchlist = useWatchlistStore((s) => s.removeFromWatchlist);
+  const addTVToWatchlist = useWatchlistStore((s) => s.addTVShowToWatchlist);
+  const removeTVFromWatchlist = useWatchlistStore((s) => s.removeTVShowFromWatchlist);
+  const inWatchlist = useWatchlistStore((s) =>
+    isTV
+      ? s.tvItems.some((t) => t.id === media!.id)
+      : s.items.some((m) => m.id === media!.id)
+  );
+  const { openTrailerModal } = useUIStore();
+
+  const handleWatchlist = () => {
+    if (!media) return;
+    if (isTV) {
+      inWatchlist
+        ? removeTVFromWatchlist(media.id)
+        : addTVToWatchlist(media as TVShow);
+    } else {
+      inWatchlist
+        ? removeFromWatchlist(media.id)
+        : addToWatchlist(media as Movie);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap gap-3">
+      {item.trailerKey && (
+        <Button
+          size="lg"
+          onClick={() => openTrailerModal(item.trailerKey!, isTV ? (media as TVShow).name : (media as Movie).title)}
+          className="gap-2"
+        >
+          <Play className="w-5 h-5" fill="currentColor" />
+          Watch Trailer
+        </Button>
+      )}
+      <Link href={href}>
+        <Button variant="secondary" size="lg" className="gap-2">
+          <Info className="w-5 h-5" />
+          More Info
+        </Button>
+      </Link>
+      <Button
+        variant="outline"
+        size="lg"
+        onClick={handleWatchlist}
+        className={cn('gap-2', inWatchlist && 'border-primary-500 text-primary-400')}
+      >
+        {inWatchlist ? (
+          <>
+            <BookmarkCheck className="w-5 h-5" />
+            In Watchlist
+          </>
+        ) : (
+          <>
+            <Bookmark className="w-5 h-5" />
+            Add to List
+          </>
+        )}
+      </Button>
+    </div>
+  );
+}
+
+/** Skeleton for the hero carousel */
+export function HeroCarouselSkeleton() {
+  return (
+    <section className="relative h-[70vh] min-h-[500px] md:h-[80vh] md:min-h-[600px] w-full bg-dark-900 animate-pulse">
+      <div className="absolute inset-0 bg-gradient-to-r from-dark-950 via-dark-950/60 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-dark-950 via-transparent to-dark-950/20" />
+      <div className="relative h-full container mx-auto px-4 md:px-8 flex items-end pb-20 md:pb-28">
+        <div className="max-w-2xl space-y-4">
+          <div className="h-10 w-96 bg-dark-800 rounded" />
+          <div className="h-5 w-64 bg-dark-800 rounded" />
+          <div className="h-16 w-full bg-dark-800 rounded" />
+          <div className="flex gap-3">
+            <div className="h-12 w-40 bg-dark-800 rounded-lg" />
+            <div className="h-12 w-32 bg-dark-800 rounded-lg" />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

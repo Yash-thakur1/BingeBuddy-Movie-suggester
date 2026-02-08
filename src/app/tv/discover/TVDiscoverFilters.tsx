@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { TV_GENRES, TV_SORT_OPTIONS } from '@/lib/tmdb';
+import { TV_GENRES, TV_SORT_OPTIONS, LANGUAGES } from '@/lib/tmdb';
 import { DropdownSelect, DropdownOption } from '@/components/ui/DropdownSelect';
 
 const genreOptions: DropdownOption[] = TV_GENRES.map((g) => ({
@@ -15,6 +15,14 @@ const sortOptions: DropdownOption[] = TV_SORT_OPTIONS.map((s) => ({
   label: s.label,
 }));
 
+const languageOptions: DropdownOption[] = [
+  { value: '', label: 'All Languages' },
+  ...LANGUAGES.map((l) => ({
+    value: l.code,
+    label: l.name,
+  })),
+];
+
 export function TVDiscoverFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -22,6 +30,7 @@ export function TVDiscoverFilters() {
   const currentGenres = searchParams.get('genres')?.split(',').map(Number) || [];
   const currentSort = searchParams.get('sort') || '';
   const currentYear = searchParams.get('year') || '';
+  const currentLang = searchParams.get('lang') || '';
 
   const updateParams = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -50,6 +59,8 @@ export function TVDiscoverFilters() {
       label: String(currentYearValue - i),
     })),
   ];
+
+  const hasActiveFilters = currentGenres.length > 0 || currentYear || currentLang;
 
   return (
     <div className="mb-6 flex flex-wrap items-end gap-3">
@@ -81,7 +92,16 @@ export function TVDiscoverFilters() {
         className="w-36"
       />
 
-      {(currentGenres.length > 0 || currentYear) && (
+      <DropdownSelect
+        options={languageOptions}
+        value={currentLang || null}
+        onChange={(v) => updateParams('lang', (v as string) || '')}
+        placeholder="All Languages"
+        label="Language"
+        className="w-44"
+      />
+
+      {hasActiveFilters && (
         <button
           onClick={() => router.push('/tv/discover')}
           className="text-sm text-primary-400 hover:text-primary-300 transition-colors pb-1"

@@ -1,14 +1,14 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { discoverTVShows } from '@/lib/tmdb';
-import { CompactPosterGrid } from '@/components/movies';
 import { MovieGridSkeleton } from '@/components/ui';
 import { TVDiscoverFilters } from './TVDiscoverFilters';
+import { TVDiscoverResults } from './TVDiscoverResults';
 
 export const metadata: Metadata = {
   title: 'Discover TV Series - Browse Shows by Genre & Rating',
   description:
-    'Explore TV series filtered by genre, year, and rating. Find binge-worthy dramas, comedies, thrillers, and more from every streaming platform.',
+    'Explore TV series filtered by genre, year, language, and rating. Find binge-worthy dramas, comedies, thrillers, and more from every streaming platform.',
   alternates: {
     canonical: '/tv/discover',
   },
@@ -25,65 +25,31 @@ interface DiscoverPageProps {
     genres?: string;
     year?: string;
     sort?: string;
-    page?: string;
+    lang?: string;
   };
 }
 
 async function DiscoverContent({ searchParams }: DiscoverPageProps) {
-  const page = parseInt(searchParams.page || '1');
   const genreIds = searchParams.genres?.split(',').map(Number).filter(Boolean) || [];
   const year = searchParams.year ? parseInt(searchParams.year) : undefined;
   const sortBy = (searchParams.sort as string) || '';
+  const lang = (searchParams.lang as string) || '';
 
   const shows = await discoverTVShows({
-    page,
+    page: 1,
     with_genres: genreIds.length > 0 ? genreIds.join(',') : undefined,
     first_air_date_year: year,
-    ...(sortBy ? { sort_by: sortBy as any } : {}),
+    ...(sortBy ? { sort_by: sortBy as string } : {}),
+    ...(lang ? { with_original_language: lang } : {}),
     'vote_count.gte': 50,
   });
 
   return (
-    <>
-      <div className="mb-4">
-        <p className="text-sm text-gray-400">
-          Found {shows.total_results.toLocaleString()} TV shows
-        </p>
-      </div>
-
-      <CompactPosterGrid tvShows={shows.results} />
-
-      {/* Pagination */}
-      {shows.total_pages > 1 && (
-        <div className="mt-8 flex justify-center gap-2">
-          {page > 1 && (
-            <a
-              href={`/tv/discover?${new URLSearchParams({
-                ...searchParams,
-                page: String(page - 1),
-              })}`}
-              className="px-4 py-2 bg-dark-800 text-white rounded-lg hover:bg-dark-700 transition-colors"
-            >
-              Previous
-            </a>
-          )}
-          <span className="px-4 py-2 text-gray-400">
-            Page {page} of {Math.min(shows.total_pages, 500)}
-          </span>
-          {page < Math.min(shows.total_pages, 500) && (
-            <a
-              href={`/tv/discover?${new URLSearchParams({
-                ...searchParams,
-                page: String(page + 1),
-              })}`}
-              className="px-4 py-2 bg-dark-800 text-white rounded-lg hover:bg-dark-700 transition-colors"
-            >
-              Next
-            </a>
-          )}
-        </div>
-      )}
-    </>
+    <TVDiscoverResults
+      initialShows={shows.results}
+      totalResults={shows.total_results}
+      totalPages={shows.total_pages}
+    />
   );
 }
 
@@ -102,7 +68,7 @@ export default function TVDiscoverPage({ searchParams }: DiscoverPageProps) {
       {/* Filters */}
       <TVDiscoverFilters />
 
-      {/* Results */}
+      {/* Results with infinite scroll */}
       <Suspense fallback={<MovieGridSkeleton />}>
         <DiscoverContent searchParams={searchParams} />
       </Suspense>
