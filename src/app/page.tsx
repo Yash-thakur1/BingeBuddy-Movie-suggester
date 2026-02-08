@@ -1,17 +1,15 @@
 import { Suspense } from 'react';
-import {
-  getTrendingMovies,
-  getPopularMovies,
-  getTopRatedMovies,
-  getNowPlayingMovies,
-  getUpcomingMovies,
-  getMoviesByGenre,
-  getMovieVideos,
-} from '@/lib/tmdb';
 import { HeroCarousel, HeroCarouselSkeleton } from '@/components/features';
 import { ContentRail, ContentRailSkeleton } from '@/components/movies';
 import { FAQSchema } from '@/components/seo';
-import { dailyShuffleMovies } from '@/lib/dailyShuffle';
+import {
+  getCachedMovieHero,
+  getCachedNewReleases,
+  getCachedTrendingMovies,
+  getCachedPopularMovies,
+  getCachedTopRatedMovies,
+  getCachedMovieGenreRail,
+} from '@/lib/serverCache';
 
 export const revalidate = 3600;
 
@@ -31,48 +29,20 @@ const GENRE_RAILS = [
   { id: 16, title: '🎨 Animation', description: 'Animated masterpieces', href: '/discover?genre=16' },
 ];
 
-/** Fetch hero items with trailers */
+/** Fetch hero items with trailers (cached hourly) */
 async function HeroContent() {
-  const trending = await getTrendingMovies('day');
-  const heroMovies = trending.results.slice(0, 6);
-
-  // Fetch trailers in parallel for first 6 items
-  const heroItems = await Promise.all(
-    heroMovies.map(async (movie) => {
-      try {
-        const videos = await getMovieVideos(movie.id);
-        const trailer = videos.results.find(
-          (v) => v.site === 'YouTube' && v.type === 'Trailer'
-        );
-        return { movie, trailerKey: trailer?.key || null };
-      } catch {
-        return { movie, trailerKey: null };
-      }
-    })
-  );
-
+  const heroItems = await getCachedMovieHero();
   return <HeroCarousel items={heroItems} />;
 }
 
 /** New Releases rail (now playing + upcoming) — auto-slides */
 async function NewReleasesRail() {
-  const [nowPlaying, upcoming] = await Promise.all([
-    getNowPlayingMovies(),
-    getUpcomingMovies(),
-  ]);
-
-  const seen = new Set<number>();
-  const merged = [...nowPlaying.results, ...upcoming.results].filter((m) => {
-    if (seen.has(m.id)) return false;
-    seen.add(m.id);
-    return true;
-  }).slice(0, 15);
-
+  const movies = await getCachedNewReleases();
   return (
     <ContentRail
       title="🆕 New Releases"
       description="Just hit theaters & streaming"
-      movies={merged}
+      movies={movies}
       viewAllHref="/discover?sort=release_date.desc"
       autoSlide
       autoSlideInterval={3000}
@@ -81,36 +51,36 @@ async function NewReleasesRail() {
 }
 
 async function TrendingRail() {
-  const trending = await getTrendingMovies('week');
+  const movies = await getCachedTrendingMovies();
   return (
     <ContentRail
       title="🔥 Trending This Week"
       description="Most popular right now"
-      movies={trending.results.slice(0, 15)}
+      movies={movies}
       viewAllHref="/discover?sort=popularity.desc"
     />
   );
 }
 
 async function PopularRail() {
-  const popular = await getPopularMovies();
+  const movies = await getCachedPopularMovies();
   return (
     <ContentRail
       title="⭐ Popular Movies"
       description="Fan favorites everyone loves"
-      movies={popular.results.slice(0, 15)}
+      movies={movies}
       viewAllHref="/discover?sort=popularity.desc"
     />
   );
 }
 
 async function TopRatedRail() {
-  const topRated = await getTopRatedMovies();
+  const movies = await getCachedTopRatedMovies();
   return (
     <ContentRail
       title="🏆 Top Rated"
       description="Critically acclaimed masterpieces"
-      movies={topRated.results.slice(0, 15)}
+      movies={movies}
       viewAllHref="/discover?sort=vote_average.desc"
     />
   );
@@ -122,19 +92,12 @@ async function GenreRail({ genreId, title, description, href }: {
   description: string;
   href: string;
 }) {
-  // Fetch 2 pages for a richer pool (40 items)
-  const [page1, page2] = await Promise.all([
-    getMoviesByGenre(genreId, 1),
-    getMoviesByGenre(genreId, 2),
-  ]);
-  const pool = [...page1.results, ...page2.results];
-  const shuffled = dailyShuffleMovies(pool, genreId, 15);
-
+  const movies = await getCachedMovieGenreRail(genreId);
   return (
     <ContentRail
       title={title}
       description={description}
-      movies={shuffled}
+      movies={movies}
       viewAllHref={href}
     />
   );

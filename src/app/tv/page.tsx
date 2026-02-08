@@ -1,17 +1,16 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
-import {
-  getTrendingTVShows,
-  getPopularTVShows,
-  getTopRatedTVShows,
-  getAiringTodayTVShows,
-  getOnTheAirTVShows,
-  getTVShowVideos,
-  discoverTVShows,
-} from '@/lib/tmdb';
 import { HeroCarousel, HeroCarouselSkeleton } from '@/components/features';
 import { ContentRail, ContentRailSkeleton } from '@/components/movies';
-import { dailyShuffleTVShows } from '@/lib/dailyShuffle';
+import {
+  getCachedTVHero,
+  getCachedAiringToday,
+  getCachedTrendingTV,
+  getCachedPopularTV,
+  getCachedTopRatedTV,
+  getCachedOnTheAirTV,
+  getCachedTVGenreRail,
+} from '@/lib/serverCache';
 
 export const metadata: Metadata = {
   title: 'TV Shows - Trending, Popular & Top Rated Series',
@@ -44,35 +43,19 @@ const TV_GENRE_RAILS = [
   { id: 99, title: '📹 Documentaries', description: 'True stories that inspire', href: '/tv/discover?genre=99' },
 ];
 
-/** Fetch hero items with trailers */
+/** Fetch hero items with trailers (cached hourly) */
 async function TVHeroContent() {
-  const trending = await getTrendingTVShows('day');
-  const heroShows = trending.results.slice(0, 6);
-
-  const heroItems = await Promise.all(
-    heroShows.map(async (tvShow) => {
-      try {
-        const videos = await getTVShowVideos(tvShow.id);
-        const trailer = videos.results.find(
-          (v) => v.site === 'YouTube' && v.type === 'Trailer'
-        );
-        return { tvShow, trailerKey: trailer?.key || null };
-      } catch {
-        return { tvShow, trailerKey: null };
-      }
-    })
-  );
-
+  const heroItems = await getCachedTVHero();
   return <HeroCarousel items={heroItems} />;
 }
 
 async function AiringTodayRail() {
-  const airingToday = await getAiringTodayTVShows();
+  const tvShows = await getCachedAiringToday();
   return (
     <ContentRail
       title="📺 Airing Today"
       description="New episodes dropping today"
-      tvShows={airingToday.results.slice(0, 15)}
+      tvShows={tvShows}
       viewAllHref="/tv/discover?sort=popularity.desc"
       autoSlide
       autoSlideInterval={3000}
@@ -81,48 +64,48 @@ async function AiringTodayRail() {
 }
 
 async function TrendingTVRail() {
-  const trending = await getTrendingTVShows('week');
+  const tvShows = await getCachedTrendingTV();
   return (
     <ContentRail
       title="🔥 Trending This Week"
       description="Most popular TV shows right now"
-      tvShows={trending.results.slice(0, 15)}
+      tvShows={tvShows}
       viewAllHref="/tv/discover?sort=popularity.desc"
     />
   );
 }
 
 async function PopularTVRail() {
-  const popular = await getPopularTVShows();
+  const tvShows = await getCachedPopularTV();
   return (
     <ContentRail
       title="⭐ Popular Shows"
       description="Fan favorites everyone loves"
-      tvShows={popular.results.slice(0, 15)}
+      tvShows={tvShows}
       viewAllHref="/tv/discover?sort=popularity.desc"
     />
   );
 }
 
 async function TopRatedTVRail() {
-  const topRated = await getTopRatedTVShows();
+  const tvShows = await getCachedTopRatedTV();
   return (
     <ContentRail
       title="🏆 Top Rated"
       description="Critically acclaimed series"
-      tvShows={topRated.results.slice(0, 15)}
+      tvShows={tvShows}
       viewAllHref="/tv/discover?sort=vote_average.desc"
     />
   );
 }
 
 async function OnTheAirRail() {
-  const onTheAir = await getOnTheAirTVShows();
+  const tvShows = await getCachedOnTheAirTV();
   return (
     <ContentRail
       title="🗓️ On The Air"
       description="Currently airing series"
-      tvShows={onTheAir.results.slice(0, 15)}
+      tvShows={tvShows}
       viewAllHref="/tv/discover?sort=popularity.desc"
     />
   );
@@ -134,18 +117,12 @@ async function TVGenreRail({ genreId, title, description, href }: {
   description: string;
   href: string;
 }) {
-  const [page1, page2] = await Promise.all([
-    discoverTVShows({ with_genres: String(genreId), sort_by: 'popularity.desc', page: 1 }),
-    discoverTVShows({ with_genres: String(genreId), sort_by: 'popularity.desc', page: 2 }),
-  ]);
-  const pool = [...page1.results, ...page2.results];
-  const shuffled = dailyShuffleTVShows(pool, genreId, 15);
-
+  const tvShows = await getCachedTVGenreRail(genreId);
   return (
     <ContentRail
       title={title}
       description={description}
-      tvShows={shuffled}
+      tvShows={tvShows}
       viewAllHref={href}
     />
   );
