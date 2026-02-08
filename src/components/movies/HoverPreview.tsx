@@ -71,6 +71,33 @@ function HoverPreviewInner({
   const removeTVFromWatchlist = useWatchlistStore((s) => s.removeTVShowFromWatchlist);
   const { openTrailerModal } = useUIStore();
 
+  // Fetch YouTube trailer key and open trailer modal
+  const handlePlayTrailer = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const fetchVideos = isTV
+        ? (await import('@/lib/tmdb/api')).getTVShowVideos
+        : (await import('@/lib/tmdb/api')).getMovieVideos;
+      const videosResponse = await fetchVideos(item.id);
+      const trailer =
+        videosResponse.results.find(
+          (v: any) => v.site === 'YouTube' && v.type === 'Trailer' && v.official
+        ) ||
+        videosResponse.results.find(
+          (v: any) => v.site === 'YouTube' && v.type === 'Trailer'
+        ) ||
+        videosResponse.results.find(
+          (v: any) => v.site === 'YouTube'
+        );
+      if (trailer?.key) {
+        openTrailerModal(trailer.key, title);
+      }
+    } catch {
+      // silently fail
+    }
+  }, [isTV, item.id, title, openTrailerModal]);
+
   // Build attributes for feedback buttons
   const mediaType = isTV ? 'tv' as const : 'movie' as const;
   const feedbackAttributes = extractAttributesFromMovie(
@@ -193,11 +220,7 @@ function HoverPreviewInner({
               Details
             </Link>
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                openTrailerModal(String(item.id), title);
-              }}
+              onClick={handlePlayTrailer}
               className="p-1.5 rounded-full border border-dark-600 text-gray-400 hover:border-primary-500 hover:text-primary-400 transition-colors"
               aria-label="Watch Trailer"
               title="Watch Trailer"

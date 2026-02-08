@@ -73,6 +73,43 @@ function MobileLongPressPreviewInner({
   const removeTVFromWatchlist = useWatchlistStore((s) => s.removeTVShowFromWatchlist);
   const { openTrailerModal } = useUIStore();
 
+  // Animated close
+  const animatedClose = useCallback(() => {
+    setClosing(true);
+    setTimeout(() => {
+      setClosing(false);
+      onClose();
+    }, 180);
+  }, [onClose]);
+
+  // Fetch YouTube trailer key and open trailer modal
+  const handlePlayTrailer = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const fetchVideos = isTV
+        ? (await import('@/lib/tmdb/api')).getTVShowVideos
+        : (await import('@/lib/tmdb/api')).getMovieVideos;
+      const videosResponse = await fetchVideos(item.id);
+      const trailer =
+        videosResponse.results.find(
+          (v: any) => v.site === 'YouTube' && v.type === 'Trailer' && v.official
+        ) ||
+        videosResponse.results.find(
+          (v: any) => v.site === 'YouTube' && v.type === 'Trailer'
+        ) ||
+        videosResponse.results.find(
+          (v: any) => v.site === 'YouTube'
+        );
+      if (trailer?.key) {
+        openTrailerModal(trailer.key, title);
+        animatedClose();
+      }
+    } catch {
+      // silently fail
+    }
+  }, [isTV, item.id, title, openTrailerModal, animatedClose]);
+
   // Build attributes for feedback buttons
   const mediaType = isTV ? 'tv' as const : 'movie' as const;
   const feedbackAttributes = extractAttributesFromMovie(
@@ -106,15 +143,6 @@ function MobileLongPressPreviewInner({
     },
     [isTV, inWatchlist, item, addToWatchlist, removeFromWatchlist, addTVToWatchlist, removeTVFromWatchlist]
   );
-
-  // Animated close
-  const animatedClose = useCallback(() => {
-    setClosing(true);
-    setTimeout(() => {
-      setClosing(false);
-      onClose();
-    }, 180);
-  }, [onClose]);
 
   // Close on scroll (any scroll on the page body)
   useEffect(() => {
@@ -208,8 +236,7 @@ function MobileLongPressPreviewInner({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                openTrailerModal(String(item.id), title);
-                animatedClose();
+                handlePlayTrailer(e);
               }}
               className="w-14 h-14 rounded-full bg-primary-600/90 flex items-center justify-center shadow-lg active:scale-95 transition-transform"
               aria-label="Watch Trailer"
@@ -266,12 +293,7 @@ function MobileLongPressPreviewInner({
           {/* Action buttons row */}
           <div className="flex items-center gap-3 mb-3">
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                openTrailerModal(String(item.id), title);
-                animatedClose();
-              }}
+              onClick={handlePlayTrailer}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-semibold active:scale-[0.97] transition-all"
             >
               <MonitorPlay className="w-4 h-4" />
