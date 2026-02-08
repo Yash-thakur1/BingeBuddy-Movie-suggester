@@ -15,6 +15,7 @@ export { InfiniteMovieGrid, InfiniteMovieGridSkeleton } from './InfiniteMovieGri
 
 // Content rails + hover preview
 export { ContentRail, ContentRailSkeleton } from './ContentRail';
+export { VirtualizedRail, VirtualizedRailSkeleton } from './VirtualizedRail';
 export { RailCard } from './RailCard';
 export { HoverPreview } from './HoverPreview';
 export { MobileLongPressPreview } from './MobileLongPressPreview';

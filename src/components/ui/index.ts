@@ -59,3 +59,6 @@ export {
   TVShowLink,
   ViewportPrefetchLink,
 } from './OptimizedLink';
+
+// Progressive loading
+export { LazyRail } from './LazyRail';

@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { HeroCarousel, HeroCarouselSkeleton } from '@/components/features';
-import { ContentRail, ContentRailSkeleton } from '@/components/movies';
+import { ContentRail, ContentRailSkeleton, VirtualizedRail, VirtualizedRailSkeleton } from '@/components/movies';
+import { LazyRail } from '@/components/ui';
 import { FAQSchema } from '@/components/seo';
 import {
   getCachedMovieHero,
@@ -94,7 +95,7 @@ async function GenreRail({ genreId, title, description, href }: {
 }) {
   const movies = await getCachedMovieGenreRail(genreId);
   return (
-    <ContentRail
+    <VirtualizedRail
       title={title}
       description={description}
       movies={movies}
@@ -124,26 +125,32 @@ export default function HomePage() {
           <TrendingRail />
         </Suspense>
 
-        {/* Popular */}
-        <Suspense fallback={<ContentRailSkeleton />}>
-          <PopularRail />
-        </Suspense>
-
-        {/* Top Rated */}
-        <Suspense fallback={<ContentRailSkeleton />}>
-          <TopRatedRail />
-        </Suspense>
-
-        {/* Genre Rails */}
-        {GENRE_RAILS.map((genre) => (
-          <Suspense key={genre.id} fallback={<ContentRailSkeleton />}>
-            <GenreRail
-              genreId={genre.id}
-              title={genre.title}
-              description={genre.description}
-              href={genre.href}
-            />
+        {/* Popular — lazy-loaded below fold */}
+        <LazyRail fallback={<ContentRailSkeleton />}>
+          <Suspense fallback={<ContentRailSkeleton />}>
+            <PopularRail />
           </Suspense>
+        </LazyRail>
+
+        {/* Top Rated — lazy-loaded below fold */}
+        <LazyRail fallback={<ContentRailSkeleton />}>
+          <Suspense fallback={<ContentRailSkeleton />}>
+            <TopRatedRail />
+          </Suspense>
+        </LazyRail>
+
+        {/* Genre Rails — lazy-loaded + virtualised */}
+        {GENRE_RAILS.map((genre) => (
+          <LazyRail key={genre.id} fallback={<VirtualizedRailSkeleton />}>
+            <Suspense fallback={<VirtualizedRailSkeleton />}>
+              <GenreRail
+                genreId={genre.id}
+                title={genre.title}
+                description={genre.description}
+                href={genre.href}
+              />
+            </Suspense>
+          </LazyRail>
         ))}
 
         {/* Internal Navigation Links */}

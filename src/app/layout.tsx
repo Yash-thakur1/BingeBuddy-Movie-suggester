@@ -1,14 +1,17 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { Inter, Outfit } from 'next/font/google';
+import dynamic from 'next/dynamic';
 import { Header, Footer } from '@/components/layout';
-import { TrailerModal } from '@/components/movies';
-import { PreviewOverlay } from '@/components/movies/PreviewOverlay';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { WatchlistSyncProvider } from '@/components/providers/WatchlistSyncProvider';
 import { PerformanceProvider } from '@/components/providers/PerformanceProvider';
 import { NetworkStatusBanner } from '@/components/ui';
 import { LazyChat } from '@/components/chat';
+
+// Defer heavy overlay / modal components — not needed for first paint
+const TrailerModal = dynamic(() => import('@/components/movies/TrailerModal').then(m => ({ default: m.TrailerModal })), { ssr: false });
+const PreviewOverlay = dynamic(() => import('@/components/movies/PreviewOverlay').then(m => ({ default: m.PreviewOverlay })), { ssr: false });
 import { WebSiteSchema } from '@/components/seo';
 import './globals.css';
 
