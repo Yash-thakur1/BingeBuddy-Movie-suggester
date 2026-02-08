@@ -26,6 +26,7 @@ interface DiscoverPageProps {
     year?: string;
     sort?: string;
     page?: string;
+    lang?: string;
   };
 }
 
@@ -33,12 +34,14 @@ async function DiscoverContent({ searchParams }: DiscoverPageProps) {
   const genreIds = searchParams.genre?.split(',').map(Number).filter(Boolean) || [];
   const year = searchParams.year ? parseInt(searchParams.year) : undefined;
   const sortBy = (searchParams.sort as string) || '';
+  const lang = searchParams.lang || undefined;
 
   const movies = await discoverMovies({
     page: 1,
     with_genres: genreIds.length > 0 ? genreIds.join(',') : undefined,
     primary_release_year: year,
     ...(sortBy ? { sort_by: sortBy as any } : {}),
+    ...(lang ? { with_original_language: lang } : {}),
     'vote_count.gte': 50,
   });
 

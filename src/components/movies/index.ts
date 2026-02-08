@@ -13,6 +13,11 @@ export { CompactPosterGrid, CompactPosterGridSkeleton, CompactPosterSection } fr
 export { MoviePreviewPanel } from './MoviePreviewPanel';
 export { InfiniteMovieGrid, InfiniteMovieGridSkeleton } from './InfiniteMovieGrid';
 
+// Content rails + hover preview
+export { ContentRail, ContentRailSkeleton } from './ContentRail';
+export { RailCard } from './RailCard';
+export { HoverPreview } from './HoverPreview';
+
 // TV Show exports
 export { TVShowCard, TVShowCardHorizontal } from './TVShowCard';
 export { TVShowGrid, TVShowSection, TVShowCarousel } from './TVShowGrid';

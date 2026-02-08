@@ -220,6 +220,26 @@ export async function getUpcomingMovies(page: number = 1): Promise<PaginatedResp
 }
 
 /**
+ * Get movies by a specific genre ID
+ */
+export async function getMoviesByGenre(
+  genreId: number,
+  page: number = 1
+): Promise<PaginatedResponse<Movie>> {
+  return tmdbFetch(
+    '/discover/movie',
+    {
+      with_genres: String(genreId),
+      sort_by: 'popularity.desc',
+      'vote_count.gte': 50,
+      include_adult: 'false',
+      page,
+    },
+    { next: { revalidate: 3600 } }
+  );
+}
+
+/**
  * Get movie details
  */
 export async function getMovieDetails(movieId: number): Promise<MovieDetails> {

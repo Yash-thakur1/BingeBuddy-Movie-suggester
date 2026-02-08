@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { GENRES, SORT_OPTIONS } from '@/lib/tmdb';
+import { GENRES, SORT_OPTIONS, LANGUAGES } from '@/lib/tmdb';
 import { DropdownSelect, DropdownOption } from '@/components/ui/DropdownSelect';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +16,14 @@ const sortOptions: DropdownOption[] = SORT_OPTIONS.map((s) => ({
   label: s.label,
 }));
 
+const languageOptions: DropdownOption[] = [
+  { value: '', label: 'All Languages' },
+  ...LANGUAGES.map((l) => ({
+    value: l.code,
+    label: l.name,
+  })),
+];
+
 export function DiscoverFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,6 +31,7 @@ export function DiscoverFilters() {
   const currentGenres = searchParams.get('genre')?.split(',').map(Number).filter(Boolean) || [];
   const currentSort = searchParams.get('sort') || '';
   const currentYear = searchParams.get('year') || '';
+  const currentLang = searchParams.get('lang') || '';
 
   const updateParams = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -43,6 +52,10 @@ export function DiscoverFilters() {
     updateParams('sort', (value as string) || '');
   };
 
+  const handleLangChange = (value: string | number | null) => {
+    updateParams('lang', (value as string) || '');
+  };
+
   const currentYearValue = new Date().getFullYear();
   const yearOptions: DropdownOption[] = [
     { value: '', label: 'All Years' },
@@ -51,6 +64,8 @@ export function DiscoverFilters() {
       label: String(currentYearValue - i),
     })),
   ];
+
+  const hasFilters = currentGenres.length > 0 || currentYear || currentLang;
 
   return (
     <div className="mb-6 flex flex-wrap items-end gap-3">
@@ -82,7 +97,16 @@ export function DiscoverFilters() {
         className="w-36"
       />
 
-      {(currentGenres.length > 0 || currentYear) && (
+      <DropdownSelect
+        options={languageOptions}
+        value={currentLang}
+        onChange={handleLangChange}
+        placeholder="All Languages"
+        label="Language"
+        className="w-40"
+      />
+
+      {hasFilters && (
         <button
           onClick={() => router.push('/discover')}
           className="text-sm text-primary-400 hover:text-primary-300 transition-colors pb-1"

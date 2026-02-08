@@ -1,68 +1,128 @@
 import { Suspense } from 'react';
-import { getTrendingMovies, getPopularMovies, getTopRatedMovies, getMovieVideos } from '@/lib/tmdb';
+import {
+  getTrendingMovies,
+  getPopularMovies,
+  getTopRatedMovies,
+  getNowPlayingMovies,
+  getUpcomingMovies,
+  getMoviesByGenre,
+  getMovieVideos,
+} from '@/lib/tmdb';
 import { HeroSection } from '@/components/features';
-import { MovieCarousel, CompactPosterSection } from '@/components/movies';
-import { HeroSkeleton, MovieGridSkeleton } from '@/components/ui';
+import { ContentRail, ContentRailSkeleton } from '@/components/movies';
+import { HeroSkeleton } from '@/components/ui';
 import { QuickMoodsSection } from './QuickMoodsSection';
 import { FAQSchema } from '@/components/seo';
 
-export const revalidate = 3600; // Revalidate every hour
+export const revalidate = 3600;
 
 /**
- * Home Page
- * Main landing page with hero, quick moods, and movie sections
+ * Home Page — Streaming-platform style dashboard with content rails.
  */
 
-// Fetch all data in parallel for better performance
-async function fetchHomePageData() {
-  const [trendingDay, trendingWeek, popular, topRated] = await Promise.all([
-    getTrendingMovies('day'),
-    getTrendingMovies('week'),
-    getPopularMovies(),
-    getTopRatedMovies(),
-  ]);
-  
-  return { trendingDay, trendingWeek, popular, topRated };
-}
+// Genre rail definitions
+const GENRE_RAILS = [
+  { id: 35, title: '😂 Comedy Hits', description: 'Laughs guaranteed', href: '/discover?genre=35' },
+  { id: 10749, title: '💕 Romance', description: 'Love stories for every mood', href: '/discover?genre=10749' },
+  { id: 878, title: '🚀 Sci-Fi', description: 'Beyond the imagination', href: '/discover?genre=878' },
+  { id: 27, title: '👻 Horror', description: 'For brave souls only', href: '/discover?genre=27' },
+  { id: 53, title: '😰 Thrillers', description: 'Edge-of-your-seat suspense', href: '/discover?genre=53' },
+  { id: 12, title: '🗺️ Adventure', description: 'Epic journeys await', href: '/discover?genre=12' },
+  { id: 99, title: '📹 Documentaries', description: 'True stories that inspire', href: '/discover?genre=99' },
+  { id: 16, title: '🎨 Animation', description: 'Animated masterpieces', href: '/discover?genre=16' },
+];
 
 async function HeroContent() {
   const trending = await getTrendingMovies('day');
   const featuredMovie = trending.results[0];
-
-  // Get trailer for featured movie
   const videos = await getMovieVideos(featuredMovie.id);
   const trailer = videos.results.find(
     (v) => v.site === 'YouTube' && v.type === 'Trailer'
   );
-
   return <HeroSection movie={featuredMovie} trailerKey={trailer?.key} />;
 }
 
-async function MovieSections() {
-  const { trendingWeek, popular, topRated } = await fetchHomePageData();
-  
+/** New Releases rail (now playing + upcoming) — auto-slides */
+async function NewReleasesRail() {
+  const [nowPlaying, upcoming] = await Promise.all([
+    getNowPlayingMovies(),
+    getUpcomingMovies(),
+  ]);
+
+  // Merge and deduplicate, take 15
+  const seen = new Set<number>();
+  const merged = [...nowPlaying.results, ...upcoming.results].filter((m) => {
+    if (seen.has(m.id)) return false;
+    seen.add(m.id);
+    return true;
+  }).slice(0, 15);
+
   return (
-    <>
-      <CompactPosterSection
-        title="🔥 Trending This Week"
-        description="Most popular movies right now"
-        movies={trendingWeek.results.slice(0, 18)}
-        viewAllHref="/discover?sort=popularity.desc"
-      />
-      
-      <MovieCarousel
-        title="⭐ Popular Movies"
-        description="Fan favorites everyone loves"
-        movies={popular.results}
-      />
-      
-      <CompactPosterSection
-        title="🏆 Top Rated"
-        description="Critically acclaimed masterpieces"
-        movies={topRated.results.slice(0, 18)}
-        viewAllHref="/discover?sort=vote_average.desc"
-      />
-    </>
+    <ContentRail
+      title="🆕 New Releases"
+      description="Just hit theaters & streaming"
+      movies={merged}
+      viewAllHref="/discover?sort=release_date.desc"
+      autoSlide
+      autoSlideInterval={3000}
+    />
+  );
+}
+
+/** Trending This Week rail */
+async function TrendingRail() {
+  const trending = await getTrendingMovies('week');
+  return (
+    <ContentRail
+      title="🔥 Trending This Week"
+      description="Most popular right now"
+      movies={trending.results.slice(0, 15)}
+      viewAllHref="/discover?sort=popularity.desc"
+    />
+  );
+}
+
+/** Popular Movies rail */
+async function PopularRail() {
+  const popular = await getPopularMovies();
+  return (
+    <ContentRail
+      title="⭐ Popular Movies"
+      description="Fan favorites everyone loves"
+      movies={popular.results.slice(0, 15)}
+      viewAllHref="/discover?sort=popularity.desc"
+    />
+  );
+}
+
+/** Top Rated rail */
+async function TopRatedRail() {
+  const topRated = await getTopRatedMovies();
+  return (
+    <ContentRail
+      title="🏆 Top Rated"
+      description="Critically acclaimed masterpieces"
+      movies={topRated.results.slice(0, 15)}
+      viewAllHref="/discover?sort=vote_average.desc"
+    />
+  );
+}
+
+/** Single genre rail (server component) */
+async function GenreRail({ genreId, title, description, href }: {
+  genreId: number;
+  title: string;
+  description: string;
+  href: string;
+}) {
+  const data = await getMoviesByGenre(genreId);
+  return (
+    <ContentRail
+      title={title}
+      description={description}
+      movies={data.results.slice(0, 15)}
+      viewAllHref={href}
+    />
   );
 }
 
@@ -79,10 +139,37 @@ export default function HomePage() {
         {/* Quick Mood Selection */}
         <QuickMoodsSection />
 
-        {/* All Movie Sections - fetched in parallel */}
-        <Suspense fallback={<MovieGridSkeleton count={12} />}>
-          <MovieSections />
+        {/* New Releases — auto-sliding rail */}
+        <Suspense fallback={<ContentRailSkeleton />}>
+          <NewReleasesRail />
         </Suspense>
+
+        {/* Trending */}
+        <Suspense fallback={<ContentRailSkeleton />}>
+          <TrendingRail />
+        </Suspense>
+
+        {/* Popular */}
+        <Suspense fallback={<ContentRailSkeleton />}>
+          <PopularRail />
+        </Suspense>
+
+        {/* Top Rated */}
+        <Suspense fallback={<ContentRailSkeleton />}>
+          <TopRatedRail />
+        </Suspense>
+
+        {/* Genre-based rails */}
+        {GENRE_RAILS.map((genre) => (
+          <Suspense key={genre.id} fallback={<ContentRailSkeleton />}>
+            <GenreRail
+              genreId={genre.id}
+              title={genre.title}
+              description={genre.description}
+              href={genre.href}
+            />
+          </Suspense>
+        ))}
 
         {/* Internal Navigation Links */}
         <section className="py-8">
@@ -141,7 +228,7 @@ export default function HomePage() {
           </a>
         </section>
 
-        {/* SEO Content Section — crawlable by search engines */}
+        {/* SEO Content Section */}
         <section className="py-8 border-t border-dark-800/50">
           <h2 className="text-lg font-semibold text-white mb-3">About BingeBuddy</h2>
           <div className="text-sm text-gray-500 space-y-2 max-w-3xl">
@@ -156,7 +243,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* FAQ structured data for rich snippets */}
+        {/* FAQ structured data */}
         <FAQSchema
           questions={[
             {
