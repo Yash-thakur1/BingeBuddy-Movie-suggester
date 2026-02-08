@@ -141,7 +141,7 @@ export default function HomePage() {
       </Suspense>
 
       {/* Content Rails */}
-      <div className="container mx-auto px-4 md:px-8 -mt-16 relative z-10">
+      <div className="container mx-auto px-2 sm:px-4 md:px-8 -mt-10 md:-mt-16 relative z-10">
 
         {/* New Releases */}
         <Suspense fallback={<ContentRailSkeleton />}>
@@ -176,66 +176,66 @@ export default function HomePage() {
         ))}
 
         {/* Internal Navigation Links */}
-        <section className="py-8">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <a href="/discover" className="group flex items-center gap-3 p-4 rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
-              <span className="text-2xl">🎬</span>
-              <div>
-                <p className="text-white text-sm font-medium group-hover:text-primary-400 transition-colors">Discover</p>
-                <p className="text-gray-500 text-xs">Browse by genre</p>
+        <section className="py-4 md:py-8">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-2 md:gap-3">
+            <a href="/discover" className="group flex flex-col sm:flex-row items-center gap-1 sm:gap-3 p-2 sm:p-3 md:p-4 rounded-lg md:rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
+              <span className="text-lg sm:text-2xl">🎬</span>
+              <div className="text-center sm:text-left">
+                <p className="text-white text-[11px] sm:text-sm font-medium group-hover:text-primary-400 transition-colors">Discover</p>
+                <p className="text-gray-500 text-[9px] sm:text-xs hidden sm:block">Browse by genre</p>
               </div>
             </a>
-            <a href="/search" className="group flex items-center gap-3 p-4 rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
-              <span className="text-2xl">🔍</span>
-              <div>
-                <p className="text-white text-sm font-medium group-hover:text-primary-400 transition-colors">Search</p>
-                <p className="text-gray-500 text-xs">Find any title</p>
+            <a href="/search" className="group flex flex-col sm:flex-row items-center gap-1 sm:gap-3 p-2 sm:p-3 md:p-4 rounded-lg md:rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
+              <span className="text-lg sm:text-2xl">🔍</span>
+              <div className="text-center sm:text-left">
+                <p className="text-white text-[11px] sm:text-sm font-medium group-hover:text-primary-400 transition-colors">Search</p>
+                <p className="text-gray-500 text-[9px] sm:text-xs hidden sm:block">Find any title</p>
               </div>
             </a>
-            <a href="/tv" className="group flex items-center gap-3 p-4 rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
-              <span className="text-2xl">📺</span>
-              <div>
-                <p className="text-white text-sm font-medium group-hover:text-primary-400 transition-colors">TV Series</p>
-                <p className="text-gray-500 text-xs">Top rated shows</p>
+            <a href="/tv" className="group flex flex-col sm:flex-row items-center gap-1 sm:gap-3 p-2 sm:p-3 md:p-4 rounded-lg md:rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
+              <span className="text-lg sm:text-2xl">📺</span>
+              <div className="text-center sm:text-left">
+                <p className="text-white text-[11px] sm:text-sm font-medium group-hover:text-primary-400 transition-colors">TV Series</p>
+                <p className="text-gray-500 text-[9px] sm:text-xs hidden sm:block">Top rated shows</p>
               </div>
             </a>
-            <a href="/recommendations" className="group flex items-center gap-3 p-4 rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
-              <span className="text-2xl">✨</span>
-              <div>
-                <p className="text-white text-sm font-medium group-hover:text-primary-400 transition-colors">AI Picks</p>
-                <p className="text-gray-500 text-xs">Personalized for you</p>
+            <a href="/recommendations" className="group flex flex-col sm:flex-row items-center gap-1 sm:gap-3 p-2 sm:p-3 md:p-4 rounded-lg md:rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
+              <span className="text-lg sm:text-2xl">✨</span>
+              <div className="text-center sm:text-left">
+                <p className="text-white text-[11px] sm:text-sm font-medium group-hover:text-primary-400 transition-colors">AI Picks</p>
+                <p className="text-gray-500 text-[9px] sm:text-xs hidden sm:block">Personalized for you</p>
               </div>
             </a>
-            <a href="/watchlist" className="group flex items-center gap-3 p-4 rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
-              <span className="text-2xl">🔖</span>
-              <div>
-                <p className="text-white text-sm font-medium group-hover:text-primary-400 transition-colors">Watchlist</p>
-                <p className="text-gray-500 text-xs">Save for later</p>
+            <a href="/watchlist" className="group flex flex-col sm:flex-row items-center gap-1 sm:gap-3 p-2 sm:p-3 md:p-4 rounded-lg md:rounded-xl bg-dark-900/60 border border-dark-800 hover:border-primary-600/30 transition-colors">
+              <span className="text-lg sm:text-2xl">🔖</span>
+              <div className="text-center sm:text-left">
+                <p className="text-white text-[11px] sm:text-sm font-medium group-hover:text-primary-400 transition-colors">Watchlist</p>
+                <p className="text-gray-500 text-[9px] sm:text-xs hidden sm:block">Save for later</p>
               </div>
             </a>
           </div>
         </section>
 
         {/* CTA Section */}
-        <section className="py-12 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+        <section className="py-6 md:py-12 text-center">
+          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2 md:mb-4">
             Can&apos;t decide what to watch?
           </h2>
-          <p className="text-gray-400 mb-8 max-w-xl mx-auto">
+          <p className="text-gray-400 text-sm md:text-base mb-4 md:mb-8 max-w-xl mx-auto">
             Let our AI recommendation engine find the perfect movie based on your mood, favorite genres, and viewing history.
           </p>
           <a
             href="/recommendations"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-primary-600 hover:bg-primary-500 text-white font-semibold rounded-full transition-all duration-200 shadow-glow"
+            className="inline-flex items-center gap-1.5 md:gap-2 px-5 py-2.5 md:px-8 md:py-4 bg-primary-600 hover:bg-primary-500 text-white text-sm md:text-base font-semibold rounded-full transition-all duration-200 shadow-glow"
           >
             ✨ Get Personalized Recommendations
           </a>
         </section>
 
         {/* SEO Content Section */}
-        <section className="py-8 border-t border-dark-800/50">
-          <h2 className="text-lg font-semibold text-white mb-3">About BingeBuddy</h2>
-          <div className="text-sm text-gray-500 space-y-2 max-w-3xl">
+        <section className="py-4 md:py-8 border-t border-dark-800/50">
+          <h2 className="text-sm md:text-lg font-semibold text-white mb-2 md:mb-3">About BingeBuddy</h2>
+          <div className="text-xs md:text-sm text-gray-500 space-y-2 max-w-3xl">
             <p>
               BingeBuddy is a free AI-powered movie and TV show discovery platform. Browse trending films,
               explore top-rated series, and get personalized recommendations based on your mood and genre preferences.

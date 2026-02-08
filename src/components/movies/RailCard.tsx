@@ -113,11 +113,11 @@ export const RailCard = memo(function RailCard({
         </div>
 
         {/* Title */}
-        <p className="mt-1.5 text-xs text-gray-300 line-clamp-1 px-0.5 leading-tight">
+        <p className="mt-1 md:mt-1.5 text-[11px] md:text-xs text-gray-300 line-clamp-1 px-0.5 leading-tight">
           {title}
         </p>
         {year && (
-          <p className="text-[10px] text-gray-500 px-0.5">{getYear(year)}</p>
+          <p className="text-[9px] md:text-[10px] text-gray-500 px-0.5">{getYear(year)}</p>
         )}
       </Link>
 

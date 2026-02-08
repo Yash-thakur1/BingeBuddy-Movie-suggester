@@ -97,26 +97,26 @@ export const ContentRail = memo(function ContentRail({
 
   return (
     <section
-      className={cn('py-4 md:py-5', className)}
+      className={cn('py-2 md:py-5', className)}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onFocus={() => setIsPaused(true)}
       onBlur={() => setIsPaused(false)}
     >
       {/* Header */}
-      <div className="flex items-end justify-between mb-3 px-1">
+      <div className="flex items-end justify-between mb-2 md:mb-3 px-0.5 md:px-1">
         <div>
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-white leading-tight">
+          <h2 className="text-base sm:text-lg md:text-2xl font-bold text-white leading-tight">
             {title}
           </h2>
           {description && (
-            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{description}</p>
+            <p className="text-[11px] sm:text-xs md:text-sm text-gray-500 mt-0.5">{description}</p>
           )}
         </div>
         {viewAllHref && (
           <Link
             href={viewAllHref}
-            className="text-xs sm:text-sm text-primary-400 hover:text-primary-300 transition-colors font-medium whitespace-nowrap"
+            className="text-[11px] sm:text-xs md:text-sm text-primary-400 hover:text-primary-300 transition-colors font-medium whitespace-nowrap"
           >
             See all →
           </Link>
@@ -169,9 +169,10 @@ export const ContentRail = memo(function ContentRail({
           role="list"
           aria-label={title}
           className={cn(
-            'flex gap-3 overflow-x-auto pb-2',
+            'flex gap-2 md:gap-3 overflow-x-auto pb-1 md:pb-2',
             'scroll-smooth snap-x snap-mandatory',
-            'scrollbar-hide'
+            'scrollbar-hide',
+            'overscroll-x-contain'
           )}
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
           tabIndex={0}
@@ -185,7 +186,7 @@ export const ContentRail = memo(function ContentRail({
               key={item.id}
               data-rail-card
               role="listitem"
-              className="shrink-0 w-[130px] sm:w-[150px] md:w-[170px] lg:w-[185px] snap-start"
+              className="shrink-0 w-[105px] sm:w-[130px] md:w-[170px] lg:w-[185px] snap-start"
             >
               <RailCard
                 movie={!isTV ? (item as Movie) : undefined}
@@ -203,19 +204,19 @@ export const ContentRail = memo(function ContentRail({
 /** Skeleton loader for a content rail */
 export function ContentRailSkeleton({ count = 10 }: { count?: number }) {
   return (
-    <section className="py-4 md:py-5">
-      <div className="mb-3 px-1">
-        <div className="h-6 w-48 bg-dark-800 rounded animate-pulse" />
-        <div className="h-4 w-32 bg-dark-800/60 rounded animate-pulse mt-1.5" />
+    <section className="py-2 md:py-5">
+      <div className="mb-2 md:mb-3 px-0.5 md:px-1">
+        <div className="h-5 md:h-6 w-36 md:w-48 bg-dark-800 rounded animate-pulse" />
+        <div className="h-3 md:h-4 w-24 md:w-32 bg-dark-800/60 rounded animate-pulse mt-1" />
       </div>
-      <div className="flex gap-3 overflow-hidden">
+      <div className="flex gap-2 md:gap-3 overflow-hidden">
         {Array.from({ length: count }).map((_, i) => (
           <div
             key={i}
-            className="shrink-0 w-[130px] sm:w-[150px] md:w-[170px] lg:w-[185px]"
+            className="shrink-0 w-[105px] sm:w-[130px] md:w-[170px] lg:w-[185px]"
           >
             <div className="aspect-[2/3] bg-dark-800 rounded-lg animate-pulse" />
-            <div className="h-3 w-3/4 bg-dark-800/60 rounded mt-2 animate-pulse" />
+            <div className="h-2.5 md:h-3 w-3/4 bg-dark-800/60 rounded mt-1.5 animate-pulse" />
           </div>
         ))}
       </div>

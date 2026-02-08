@@ -13,11 +13,11 @@ import { cn } from '@/lib/utils';
 /**
  * HeroCarousel — Full-width streaming-style hero carousel.
  * Supports both Movie and TVShow items.
- * • Auto-slides every 3s in a circular loop
- * • Pause on hover / focus / interaction
- * • Left/right arrows + dot indicators
- * • GPU-accelerated transitions
- * • Responsive + keyboard navigable
+ * • Auto-slides every 3 s in a circular loop
+ * • Touch swipe on mobile, arrows on desktop
+ * • Dot indicators + keyboard navigation
+ * • GPU-accelerated opacity transitions
+ * • Compact mobile layout, full-width desktop
  */
 
 interface HeroItem {
@@ -39,6 +39,8 @@ export const HeroCarousel = memo(function HeroCarousel({
   const [isPaused, setIsPaused] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartRef = useRef({ x: 0, y: 0 });
+  const isSwipingRef = useRef(false);
   const total = items.length;
 
   const goTo = useCallback(
@@ -53,6 +55,31 @@ export const HeroCarousel = memo(function HeroCarousel({
 
   const next = useCallback(() => goTo(current + 1), [current, goTo]);
   const prev = useCallback(() => goTo(current - 1), [current, goTo]);
+
+  // Touch swipe handlers for mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    isSwipingRef.current = false;
+    setIsPaused(true);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const dx = Math.abs(e.touches[0].clientX - touchStartRef.current.x);
+    const dy = Math.abs(e.touches[0].clientY - touchStartRef.current.y);
+    if (dx > dy && dx > 10) isSwipingRef.current = true;
+  }, []);
+
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+      if (isSwipingRef.current && Math.abs(dx) > 50) {
+        dx < 0 ? next() : prev();
+      }
+      // Resume auto-slide after interaction
+      setTimeout(() => setIsPaused(false), 5000);
+    },
+    [next, prev]
+  );
 
   // Auto-slide
   useEffect(() => {
@@ -80,11 +107,19 @@ export const HeroCarousel = memo(function HeroCarousel({
 
   return (
     <section
-      className={cn('relative h-[70vh] min-h-[500px] md:h-[80vh] md:min-h-[600px] w-full overflow-hidden', className)}
+      className={cn(
+        'relative w-full overflow-hidden',
+        'h-[56vh] min-h-[360px]',          // mobile-first: compact hero
+        'md:h-[80vh] md:min-h-[600px]',     // desktop: full cinematic
+        className
+      )}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onFocus={() => setIsPaused(true)}
       onBlur={() => setIsPaused(false)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       role="region"
       aria-label="Featured content carousel"
       aria-roledescription="carousel"
@@ -125,27 +160,27 @@ export const HeroCarousel = memo(function HeroCarousel({
       })}
 
       {/* Content overlay */}
-      <div className="relative z-20 h-full container mx-auto px-4 md:px-8 flex items-end pb-20 md:pb-28">
+      <div className="relative z-20 h-full container mx-auto px-3 md:px-8 flex items-end pb-14 md:pb-28">
         <div
           key={current}
           className="max-w-2xl animate-fade-in-up"
         >
           {/* Type badge */}
           {isTV && (
-            <Badge variant="primary" className="mb-3">
+            <Badge variant="primary" className="mb-2 md:mb-3">
               TV Series
             </Badge>
           )}
 
           {/* Title */}
-          <h2 className="text-3xl md:text-5xl lg:text-6xl font-display font-bold text-white mb-3 leading-tight">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-display font-bold text-white mb-1.5 md:mb-3 leading-tight">
             {title}
           </h2>
 
           {/* Meta info */}
-          <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-3">
+          <div className="flex flex-wrap items-center gap-1.5 md:gap-3 mb-1.5 md:mb-3">
             {rating > 0 && <RatingBadge rating={rating} size="lg" />}
-            {date && <span className="text-gray-300 text-sm md:text-base">{getYear(date)}</span>}
+            {date && <span className="text-gray-300 text-xs md:text-base">{getYear(date)}</span>}
             {genreIds.length > 0 && (
               <>
                 <span className="text-gray-500 hidden sm:inline">•</span>
@@ -160,8 +195,8 @@ export const HeroCarousel = memo(function HeroCarousel({
             )}
           </div>
 
-          {/* Overview */}
-          <p className="text-gray-300 text-sm md:text-base lg:text-lg line-clamp-2 md:line-clamp-3 mb-5">
+          {/* Overview — 2 lines on mobile, 3 on desktop */}
+          <p className="text-gray-300 text-xs sm:text-sm md:text-base lg:text-lg line-clamp-2 md:line-clamp-3 mb-3 md:mb-5">
             {overview}
           </p>
 
@@ -170,16 +205,17 @@ export const HeroCarousel = memo(function HeroCarousel({
         </div>
       </div>
 
-      {/* Left / Right arrows */}
+      {/* Arrows — hidden on mobile (swipe instead), shown on md+ */}
       {total > 1 && (
         <>
           <button
             onClick={prev}
             className={cn(
-              'absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-30',
+              'absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-30',
+              'hidden md:flex',
               'w-10 h-10 md:w-12 md:h-12 rounded-full',
               'bg-dark-900/60 backdrop-blur-sm border border-dark-700/50',
-              'flex items-center justify-center text-white',
+              'items-center justify-center text-white',
               'hover:bg-dark-800 transition-colors',
               'focus:outline-none focus:ring-2 focus:ring-primary-500'
             )}
@@ -190,10 +226,11 @@ export const HeroCarousel = memo(function HeroCarousel({
           <button
             onClick={next}
             className={cn(
-              'absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-30',
+              'absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-30',
+              'hidden md:flex',
               'w-10 h-10 md:w-12 md:h-12 rounded-full',
               'bg-dark-900/60 backdrop-blur-sm border border-dark-700/50',
-              'flex items-center justify-center text-white',
+              'items-center justify-center text-white',
               'hover:bg-dark-800 transition-colors',
               'focus:outline-none focus:ring-2 focus:ring-primary-500'
             )}
@@ -206,16 +243,17 @@ export const HeroCarousel = memo(function HeroCarousel({
 
       {/* Dot indicators */}
       {total > 1 && (
-        <div className="absolute bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-30 flex gap-2">
+        <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 z-30 flex gap-1.5 md:gap-2">
           {items.map((_, index) => (
             <button
               key={index}
               onClick={() => goTo(index)}
               className={cn(
-                'h-1.5 rounded-full transition-all duration-300',
+                'rounded-full transition-all duration-300',
+                'h-1 md:h-1.5',
                 index === current
-                  ? 'w-8 bg-primary-500'
-                  : 'w-3 bg-white/30 hover:bg-white/50'
+                  ? 'w-6 md:w-8 bg-primary-500'
+                  : 'w-2 md:w-3 bg-white/30 hover:bg-white/50'
               )}
               aria-label={`Go to slide ${index + 1}`}
               aria-current={index === current ? 'true' : undefined}
@@ -227,7 +265,7 @@ export const HeroCarousel = memo(function HeroCarousel({
   );
 });
 
-/** Hero action buttons — extracted to reduce re-renders */
+/** Hero action buttons — compact on mobile, full on desktop */
 function HeroActions({ item, href }: { item: HeroItem; href: string }) {
   const media = item.movie || item.tvShow;
   const isTV = !!item.tvShow;
@@ -257,40 +295,36 @@ function HeroActions({ item, href }: { item: HeroItem; href: string }) {
   };
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap gap-2 md:gap-3">
       {item.trailerKey && (
         <Button
-          size="lg"
           onClick={() => openTrailerModal(item.trailerKey!, isTV ? (media as TVShow).name : (media as Movie).title)}
-          className="gap-2"
+          className="gap-1.5 md:gap-2 px-3 py-2 text-sm md:px-8 md:py-3 md:text-lg"
         >
-          <Play className="w-5 h-5" fill="currentColor" />
-          Watch Trailer
+          <Play className="w-4 h-4 md:w-5 md:h-5" fill="currentColor" />
+          <span className="hidden sm:inline">Watch </span>Trailer
         </Button>
       )}
       <Link href={href}>
-        <Button variant="secondary" size="lg" className="gap-2">
-          <Info className="w-5 h-5" />
-          More Info
+        <Button variant="secondary" className="gap-1.5 md:gap-2 px-3 py-2 text-sm md:px-8 md:py-3 md:text-lg">
+          <Info className="w-4 h-4 md:w-5 md:h-5" />
+          <span className="hidden sm:inline">More </span>Info
         </Button>
       </Link>
       <Button
         variant="outline"
-        size="lg"
         onClick={handleWatchlist}
-        className={cn('gap-2', inWatchlist && 'border-primary-500 text-primary-400')}
+        className={cn(
+          'gap-1.5 md:gap-2 px-3 py-2 text-sm md:px-8 md:py-3 md:text-lg',
+          inWatchlist && 'border-primary-500 text-primary-400'
+        )}
       >
         {inWatchlist ? (
-          <>
-            <BookmarkCheck className="w-5 h-5" />
-            In Watchlist
-          </>
+          <BookmarkCheck className="w-4 h-4 md:w-5 md:h-5" />
         ) : (
-          <>
-            <Bookmark className="w-5 h-5" />
-            Add to List
-          </>
+          <Bookmark className="w-4 h-4 md:w-5 md:h-5" />
         )}
+        <span className="hidden sm:inline">{inWatchlist ? 'In Watchlist' : 'Add to List'}</span>
       </Button>
     </div>
   );
@@ -299,17 +333,17 @@ function HeroActions({ item, href }: { item: HeroItem; href: string }) {
 /** Skeleton for the hero carousel */
 export function HeroCarouselSkeleton() {
   return (
-    <section className="relative h-[70vh] min-h-[500px] md:h-[80vh] md:min-h-[600px] w-full bg-dark-900 animate-pulse">
+    <section className="relative h-[56vh] min-h-[360px] md:h-[80vh] md:min-h-[600px] w-full bg-dark-900 animate-pulse">
       <div className="absolute inset-0 bg-gradient-to-r from-dark-950 via-dark-950/60 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-t from-dark-950 via-transparent to-dark-950/20" />
-      <div className="relative h-full container mx-auto px-4 md:px-8 flex items-end pb-20 md:pb-28">
-        <div className="max-w-2xl space-y-4">
-          <div className="h-10 w-96 bg-dark-800 rounded" />
-          <div className="h-5 w-64 bg-dark-800 rounded" />
-          <div className="h-16 w-full bg-dark-800 rounded" />
-          <div className="flex gap-3">
-            <div className="h-12 w-40 bg-dark-800 rounded-lg" />
-            <div className="h-12 w-32 bg-dark-800 rounded-lg" />
+      <div className="relative h-full container mx-auto px-3 md:px-8 flex items-end pb-14 md:pb-28">
+        <div className="max-w-2xl space-y-2.5 md:space-y-4">
+          <div className="h-7 w-64 md:h-10 md:w-96 bg-dark-800 rounded" />
+          <div className="h-4 w-40 md:h-5 md:w-64 bg-dark-800 rounded" />
+          <div className="h-10 md:h-16 w-full bg-dark-800 rounded" />
+          <div className="flex gap-2 md:gap-3">
+            <div className="h-9 w-24 md:h-12 md:w-40 bg-dark-800 rounded-lg" />
+            <div className="h-9 w-20 md:h-12 md:w-32 bg-dark-800 rounded-lg" />
           </div>
         </div>
       </div>
