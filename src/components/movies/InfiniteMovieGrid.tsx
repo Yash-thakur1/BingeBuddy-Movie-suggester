@@ -201,7 +201,7 @@ export const InfiniteMovieGrid = memo(function InfiniteMovieGrid({
   fetchNextPage,
   priorityCount = 6,
   className,
-  enablePreview = true,
+  enablePreview = false,
 }: InfiniteMovieGridProps) {
   // ---- State ----
   const [movies, setMovies] = useState<Movie[]>(initialMovies);
