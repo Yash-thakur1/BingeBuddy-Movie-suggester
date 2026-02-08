@@ -151,6 +151,7 @@ export const HeroCarousel = memo(function HeroCarousel({
               priority={index < 2}
               sizes="100vw"
               loading={index < 2 ? 'eager' : 'lazy'}
+              fetchPriority={index === 0 ? 'high' : undefined}
             />
             {/* Gradients */}
             <div className="absolute inset-0 bg-gradient-to-r from-dark-950 via-dark-950/60 to-transparent" />

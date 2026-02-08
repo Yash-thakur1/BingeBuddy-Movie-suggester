@@ -6,10 +6,10 @@ import { Header, Footer } from '@/components/layout';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { WatchlistSyncProvider } from '@/components/providers/WatchlistSyncProvider';
 import { PerformanceProvider } from '@/components/providers/PerformanceProvider';
-import { NetworkStatusBanner } from '@/components/ui';
 import { LazyChat } from '@/components/chat';
 
-// Defer heavy overlay / modal components — not needed for first paint
+// Defer non-critical UI — not needed for first paint
+const NetworkStatusBanner = dynamic(() => import('@/components/ui/NetworkStatus').then(m => ({ default: m.NetworkStatusBanner })), { ssr: false });
 const TrailerModal = dynamic(() => import('@/components/movies/TrailerModal').then(m => ({ default: m.TrailerModal })), { ssr: false });
 const PreviewOverlay = dynamic(() => import('@/components/movies/PreviewOverlay').then(m => ({ default: m.PreviewOverlay })), { ssr: false });
 import { WebSiteSchema } from '@/components/seo';
@@ -129,6 +129,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://api.themoviedb.org" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://pagead2.googlesyndication.com" />
 
         {/* Google Tag Manager */}
         <Script id="gtm" strategy="afterInteractive">
@@ -146,12 +147,12 @@ export default function RootLayout({
           description="AI-powered movie and TV show recommendation engine. Discover trending films, get personalized suggestions, and build your watchlist."
         />
 
-        {/* Google AdSense — beforeInteractive so it appears in SSR HTML for verification */}
+        {/* Google AdSense */}
         <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2161075687441902"
           crossOrigin="anonymous"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
 
         <Script

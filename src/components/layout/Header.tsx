@@ -72,6 +72,7 @@ export function Header() {
                 width={48}
                 height={48}
                 className="w-10 h-10 md:w-12 md:h-12"
+                priority
               />
               <span className="text-base sm:text-xl md:text-2xl">BingeBuddy</span>
             </Link>
