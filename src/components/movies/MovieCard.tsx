@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Bookmark, BookmarkCheck, Play } from 'lucide-react';
@@ -9,6 +10,7 @@ import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge, Badge } from '@/components/ui';
 import { useWatchlistStore } from '@/store';
 import { useMoviePrefetch } from '@/hooks';
+import { HoverPreview } from './HoverPreview';
 
 /**
  * Movie Card Component
@@ -38,6 +40,21 @@ export function MovieCard({
   // Prefetch movie data on hover
   const prefetchProps = useMoviePrefetch(movie.id);
 
+  // Hover preview state (desktop only)
+  const [showPreview, setShowPreview] = useState(false);
+  const hoverTimer = useRef<NodeJS.Timeout | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseEnter = useCallback(() => {
+    prefetchProps.onMouseEnter();
+    hoverTimer.current = setTimeout(() => setShowPreview(true), 400);
+  }, [prefetchProps]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    setShowPreview(false);
+  }, []);
+
   const handleWatchlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -55,7 +72,13 @@ export function MovieCard({
   };
 
   return (
-    <div className="group relative" {...prefetchProps}>
+    <div
+      ref={cardRef}
+      className="group relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onFocus={prefetchProps.onFocus}
+    >
       <Link href={`/movie/${movie.id}`} className="block">
         <div
           className={cn(
@@ -134,6 +157,11 @@ export function MovieCard({
           </div>
         </div>
       </Link>
+
+      {/* Desktop hover preview */}
+      {showPreview && (
+        <HoverPreview movie={movie} anchorRef={cardRef} />
+      )}
     </div>
   );
 }

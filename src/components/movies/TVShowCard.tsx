@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Bookmark, BookmarkCheck, Play } from 'lucide-react';
@@ -8,6 +9,7 @@ import { getImageUrl, getYear, getTVGenreName } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge, Badge } from '@/components/ui';
 import { useWatchlistStore } from '@/store';
+import { HoverPreview } from './HoverPreview';
 
 /**
  * TV Show Card Component
@@ -34,6 +36,20 @@ export function TVShowCard({
   // Subscribe to tvItems array so component re-renders when watchlist changes
   const inWatchlist = useWatchlistStore((state) => state.tvItems.some((s) => s.id === show.id));
 
+  // Hover preview state (desktop only)
+  const [showPreview, setShowPreview] = useState(false);
+  const hoverTimer = useRef<NodeJS.Timeout | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseEnter = useCallback(() => {
+    hoverTimer.current = setTimeout(() => setShowPreview(true), 400);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    setShowPreview(false);
+  }, []);
+
   const handleWatchlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -51,7 +67,12 @@ export function TVShowCard({
   };
 
   return (
-    <div className="group relative">
+    <div
+      ref={cardRef}
+      className="group relative"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       <Link href={`/tv/${show.id}`} className="block">
         <div
           className={cn(
@@ -137,6 +158,11 @@ export function TVShowCard({
           </div>
         </div>
       </Link>
+
+      {/* Desktop hover preview */}
+      {showPreview && (
+        <HoverPreview tvShow={show} anchorRef={cardRef} />
+      )}
     </div>
   );
 }

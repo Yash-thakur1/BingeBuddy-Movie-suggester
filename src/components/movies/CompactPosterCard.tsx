@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, useRef, memo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Movie } from '@/types/movie';
@@ -8,6 +8,7 @@ import { TVShow } from '@/types/movie';
 import { getImageUrl } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge } from '@/components/ui';
+import { HoverPreview } from './HoverPreview';
 
 /**
  * Compact poster-only card for Netflix-style dense grids
@@ -64,6 +65,18 @@ function CompactPosterCardInner({
   disableLink: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const hoverTimer = useRef<NodeJS.Timeout | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseEnter = useCallback(() => {
+    hoverTimer.current = setTimeout(() => setShowPreview(true), 400);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    setShowPreview(false);
+  }, []);
 
   const href = isTV ? `/tv/${item.id}` : `/movie/${item.id}`;
   const title = isTV ? (item as TVShow).name : (item as Movie).title;
@@ -133,12 +146,42 @@ function CompactPosterCardInner({
   );
 
   if (disableLink) {
-    return <div className={cn('block group', className)}>{cardContent}</div>;
+    return (
+      <div
+        ref={cardRef}
+        className={cn('block group relative', className)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+      >
+        {cardContent}
+        {showPreview && (
+          <HoverPreview
+            movie={!isTV ? (item as Movie) : undefined}
+            tvShow={isTV ? (item as TVShow) : undefined}
+            anchorRef={cardRef}
+          />
+        )}
+      </div>
+    );
   }
 
   return (
-    <Link href={href} className={cn('block group', className)} prefetch={false}>
-      {cardContent}
-    </Link>
+    <div
+      ref={cardRef}
+      className={cn('relative', className)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <Link href={href} className="block group" prefetch={false}>
+        {cardContent}
+      </Link>
+      {showPreview && (
+        <HoverPreview
+          movie={!isTV ? (item as Movie) : undefined}
+          tvShow={isTV ? (item as TVShow) : undefined}
+          anchorRef={cardRef}
+        />
+      )}
+    </div>
   );
 }

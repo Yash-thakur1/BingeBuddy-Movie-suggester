@@ -4,11 +4,11 @@ import { useRef, useEffect, useState, useCallback, memo, RefObject } from 'react
 import Image from 'next/image';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import { Bookmark, BookmarkCheck, Play, ThumbsUp, ThumbsDown, Star } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Play, ThumbsUp, ThumbsDown, Star, MonitorPlay } from 'lucide-react';
 import { Movie, TVShow } from '@/types/movie';
 import { getImageUrl, getYear, getGenreName } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
-import { useWatchlistStore } from '@/store';
+import { useWatchlistStore, useUIStore } from '@/store';
 
 /**
  * Desktop hover preview popup.
@@ -62,6 +62,7 @@ function HoverPreviewInner({
   );
   const addTVToWatchlist = useWatchlistStore((s) => s.addTVShowToWatchlist);
   const removeTVFromWatchlist = useWatchlistStore((s) => s.removeTVShowFromWatchlist);
+  const { openTrailerModal } = useUIStore();
 
   // Position calculation
   useEffect(() => {
@@ -165,6 +166,18 @@ function HoverPreviewInner({
               <Play className="w-3.5 h-3.5" fill="currentColor" />
               Details
             </Link>
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openTrailerModal(String(item.id), title);
+              }}
+              className="p-1.5 rounded-full border border-dark-600 text-gray-400 hover:border-primary-500 hover:text-primary-400 transition-colors"
+              aria-label="Watch Trailer"
+              title="Watch Trailer"
+            >
+              <MonitorPlay className="w-3.5 h-3.5" />
+            </button>
             <button
               onClick={handleWatchlist}
               className={cn(
