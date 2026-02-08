@@ -675,6 +675,14 @@ interface UIState {
   currentTrailerKey: string | null;
   currentTrailerTitle: string;
   isMobileMenuOpen: boolean;
+
+  // Preview overlay state (singleton — used by HoverPreview & MobileLongPressPreview)
+  previewItem: Movie | TVShow | null;
+  previewIsTV: boolean;
+  /** Anchor rect for desktop positioning */
+  previewAnchorRect: { top: number; left: number; width: number; height: number } | null;
+  /** Which device triggered the preview */
+  previewMode: 'hover' | 'longpress' | null;
   
   openSearch: () => void;
   closeSearch: () => void;
@@ -682,6 +690,8 @@ interface UIState {
   closeTrailerModal: () => void;
   toggleMobileMenu: () => void;
   closeMobileMenu: () => void;
+  openPreview: (item: Movie | TVShow, isTV: boolean, anchorRect: { top: number; left: number; width: number; height: number }, mode: 'hover' | 'longpress') => void;
+  closePreview: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -690,6 +700,11 @@ export const useUIStore = create<UIState>((set) => ({
   currentTrailerKey: null,
   currentTrailerTitle: '',
   isMobileMenuOpen: false,
+
+  previewItem: null,
+  previewIsTV: false,
+  previewAnchorRect: null,
+  previewMode: null,
   
   openSearch: () => set({ isSearchOpen: true }),
   closeSearch: () => set({ isSearchOpen: false }),
@@ -701,6 +716,11 @@ export const useUIStore = create<UIState>((set) => ({
   
   toggleMobileMenu: () => set((state) => ({ isMobileMenuOpen: !state.isMobileMenuOpen })),
   closeMobileMenu: () => set({ isMobileMenuOpen: false }),
+
+  openPreview: (item, isTV, anchorRect, mode) =>
+    set({ previewItem: item, previewIsTV: isTV, previewAnchorRect: anchorRect, previewMode: mode }),
+  closePreview: () =>
+    set({ previewItem: null, previewIsTV: false, previewAnchorRect: null, previewMode: null }),
 }));
 
 // ============================================

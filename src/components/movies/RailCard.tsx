@@ -7,8 +7,7 @@ import { Movie, TVShow } from '@/types/movie';
 import { getImageUrl, getYear, getGenreName } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge } from '@/components/ui';
-import { HoverPreview } from './HoverPreview';
-import { MobileLongPressPreview } from './MobileLongPressPreview';
+import { useUIStore } from '@/store';
 import { useLongPress } from '@/hooks/useLongPress';
 
 /**
@@ -130,23 +129,6 @@ export const RailCard = memo(function RailCard({
           <p className="text-[9px] md:text-[10px] text-gray-500 px-0.5">{getYear(year)}</p>
         )}
       </Link>
-
-      {/* Desktop hover preview */}
-      {showPreview && (
-        <HoverPreview
-          movie={movie}
-          tvShow={tvShow}
-          anchorRef={cardRef}
-        />
-      )}
-
-      {/* Mobile long-press preview */}
-      <MobileLongPressPreview
-        movie={movie}
-        tvShow={tvShow}
-        isOpen={showMobilePreview}
-        onClose={() => setShowMobilePreview(false)}
-      />
     </div>
   );
 });

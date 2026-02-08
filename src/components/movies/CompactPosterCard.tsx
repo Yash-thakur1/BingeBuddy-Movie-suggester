@@ -8,8 +8,7 @@ import { TVShow } from '@/types/movie';
 import { getImageUrl } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge } from '@/components/ui';
-import { HoverPreview } from './HoverPreview';
-import { MobileLongPressPreview } from './MobileLongPressPreview';
+import { useUIStore } from '@/store';
 import { useLongPress } from '@/hooks/useLongPress';
 
 /**
@@ -67,25 +66,27 @@ function CompactPosterCardInner({
   disableLink: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showMobilePreview, setShowMobilePreview] = useState(false);
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const { openPreview, closePreview } = useUIStore();
 
   // Desktop hover
   const handleMouseEnter = useCallback(() => {
-    hoverTimer.current = setTimeout(() => setShowPreview(true), 400);
-  }, []);
+    hoverTimer.current = setTimeout(() => {
+      const rect = cardRef.current?.getBoundingClientRect();
+      if (rect) openPreview(item, isTV, { top: rect.top, left: rect.left, width: rect.width, height: rect.height }, 'hover');
+    }, 400);
+  }, [item, isTV, openPreview]);
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    setShowPreview(false);
-  }, []);
+    closePreview();
+  }, [closePreview]);
 
   // Mobile long-press
   const longPressHandlers = useLongPress({
     delay: 450,
-    onLongPress: () => setShowMobilePreview(true),
+    onLongPress: () => openPreview(item, isTV, { top: 0, left: 0, width: 0, height: 0 }, 'longpress'),
   });
 
   const href = isTV ? `/tv/${item.id}` : `/movie/${item.id}`;
@@ -155,24 +156,6 @@ function CompactPosterCardInner({
     </>
   );
 
-  const previewPortals = (
-    <>
-      {showPreview && (
-        <HoverPreview
-          movie={!isTV ? (item as Movie) : undefined}
-          tvShow={isTV ? (item as TVShow) : undefined}
-          anchorRef={cardRef}
-        />
-      )}
-      <MobileLongPressPreview
-        movie={!isTV ? (item as Movie) : undefined}
-        tvShow={isTV ? (item as TVShow) : undefined}
-        isOpen={showMobilePreview}
-        onClose={() => setShowMobilePreview(false)}
-      />
-    </>
-  );
-
   if (disableLink) {
     return (
       <div
@@ -183,7 +166,6 @@ function CompactPosterCardInner({
         {...longPressHandlers}
       >
         {cardContent}
-        {previewPortals}
       </div>
     );
   }
@@ -199,7 +181,6 @@ function CompactPosterCardInner({
       <Link href={href} className="block group" prefetch={false}>
         {cardContent}
       </Link>
-      {previewPortals}
     </div>
   );
 }

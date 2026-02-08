@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Bookmark, BookmarkCheck, Play } from 'lucide-react';
@@ -8,10 +8,8 @@ import { Movie } from '@/types/movie';
 import { getImageUrl, getYear, getGenreName } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge, Badge } from '@/components/ui';
-import { useWatchlistStore } from '@/store';
+import { useWatchlistStore, useUIStore } from '@/store';
 import { useMoviePrefetch } from '@/hooks';
-import { HoverPreview } from './HoverPreview';
-import { MobileLongPressPreview } from './MobileLongPressPreview';
 import { useLongPress } from '@/hooks/useLongPress';
 
 /**
@@ -41,27 +39,29 @@ export function MovieCard({
   
   // Prefetch movie data on hover
   const prefetchProps = useMoviePrefetch(movie.id);
+  const { openPreview, closePreview } = useUIStore();
 
-  // Hover preview state (desktop only)
-  const [showPreview, setShowPreview] = useState(false);
-  const [showMobilePreview, setShowMobilePreview] = useState(false);
+  // Hover preview state (desktop — dispatches to global singleton)
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const handleMouseEnter = useCallback(() => {
     prefetchProps.onMouseEnter();
-    hoverTimer.current = setTimeout(() => setShowPreview(true), 400);
-  }, [prefetchProps]);
+    hoverTimer.current = setTimeout(() => {
+      const rect = cardRef.current?.getBoundingClientRect();
+      if (rect) openPreview(movie, false, { top: rect.top, left: rect.left, width: rect.width, height: rect.height }, 'hover');
+    }, 400);
+  }, [prefetchProps, movie, openPreview]);
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    setShowPreview(false);
-  }, []);
+    closePreview();
+  }, [closePreview]);
 
   // Mobile long-press
   const longPressHandlers = useLongPress({
     delay: 450,
-    onLongPress: () => setShowMobilePreview(true),
+    onLongPress: () => openPreview(movie, false, { top: 0, left: 0, width: 0, height: 0 }, 'longpress'),
   });
 
   const handleWatchlistToggle = (e: React.MouseEvent) => {
@@ -167,18 +167,6 @@ export function MovieCard({
           </div>
         </div>
       </Link>
-
-      {/* Desktop hover preview */}
-      {showPreview && (
-        <HoverPreview movie={movie} anchorRef={cardRef} />
-      )}
-
-      {/* Mobile long-press preview */}
-      <MobileLongPressPreview
-        movie={movie}
-        isOpen={showMobilePreview}
-        onClose={() => setShowMobilePreview(false)}
-      />
     </div>
   );
 }

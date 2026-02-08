@@ -4,11 +4,13 @@ import { useCallback, useEffect, memo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import { Bookmark, BookmarkCheck, Play, ThumbsUp, ThumbsDown, Star, MonitorPlay, X } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Play, Star, MonitorPlay, X } from 'lucide-react';
 import { Movie, TVShow } from '@/types/movie';
 import { getImageUrl, getYear, getGenreName } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { useWatchlistStore, useUIStore } from '@/store';
+import { FeedbackButtons } from '@/components/features/FeedbackButtons';
+import { extractAttributesFromMovie } from '@/lib/ai/preferenceLearning';
 
 /**
  * Mobile long-press preview overlay.
@@ -70,6 +72,23 @@ function MobileLongPressPreviewInner({
   const addTVToWatchlist = useWatchlistStore((s) => s.addTVShowToWatchlist);
   const removeTVFromWatchlist = useWatchlistStore((s) => s.removeTVShowFromWatchlist);
   const { openTrailerModal } = useUIStore();
+
+  // Build attributes for feedback buttons
+  const mediaType = isTV ? 'tv' as const : 'movie' as const;
+  const feedbackAttributes = extractAttributesFromMovie(
+    {
+      id: item.id,
+      title: isTV ? undefined : title,
+      name: isTV ? title : undefined,
+      original_language: item.original_language,
+      genre_ids: genreIds,
+      release_date: isTV ? undefined : date,
+      first_air_date: isTV ? date : undefined,
+      vote_average: rating,
+      popularity: item.popularity,
+    },
+    mediaType
+  );
 
   const handleWatchlist = useCallback(
     (e: React.MouseEvent) => {
@@ -274,18 +293,12 @@ function MobileLongPressPreviewInner({
                 <Bookmark className="w-5 h-5" />
               )}
             </button>
-            <button
-              className="p-2.5 rounded-lg border border-dark-600 text-gray-400 active:border-green-500 active:text-green-400 transition-colors active:scale-[0.95]"
-              aria-label="Like"
-            >
-              <ThumbsUp className="w-5 h-5" />
-            </button>
-            <button
-              className="p-2.5 rounded-lg border border-dark-600 text-gray-400 active:border-red-500 active:text-red-400 transition-colors active:scale-[0.95]"
-              aria-label="Dislike"
-            >
-              <ThumbsDown className="w-5 h-5" />
-            </button>
+            <FeedbackButtons
+              mediaId={item.id}
+              mediaType={mediaType}
+              attributes={feedbackAttributes}
+              size="md"
+            />
           </div>
 
           {/* Full Details link */}

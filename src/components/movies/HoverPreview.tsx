@@ -1,14 +1,16 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback, memo, RefObject } from 'react';
+import { useRef, useEffect, useState, useCallback, memo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
-import { Bookmark, BookmarkCheck, Play, ThumbsUp, ThumbsDown, Star, MonitorPlay } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Play, Star, MonitorPlay } from 'lucide-react';
 import { Movie, TVShow } from '@/types/movie';
 import { getImageUrl, getYear, getGenreName } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { useWatchlistStore, useUIStore } from '@/store';
+import { FeedbackButtons } from '@/components/features/FeedbackButtons';
+import { extractAttributesFromMovie } from '@/lib/ai/preferenceLearning';
 
 /**
  * Desktop hover preview popup.
@@ -20,24 +22,29 @@ import { useWatchlistStore, useUIStore } from '@/store';
 interface HoverPreviewProps {
   movie?: Movie;
   tvShow?: TVShow;
-  anchorRef: RefObject<HTMLDivElement | null>;
+  /** Pre-computed anchor rect (from store-based singleton mode) */
+  anchorRect?: { top: number; left: number; width: number; height: number };
+  /** Callback to close preview (singleton mode) */
+  onClose?: () => void;
 }
 
 export const HoverPreview = memo(function HoverPreview({
   movie,
   tvShow,
-  anchorRef,
+  anchorRect,
+  onClose,
 }: HoverPreviewProps) {
   const item = movie || tvShow;
   if (!item) return null;
 
-  return <HoverPreviewInner movie={movie} tvShow={tvShow} anchorRef={anchorRef} />;
+  return <HoverPreviewInner movie={movie} tvShow={tvShow} anchorRect={anchorRect} onClose={onClose} />;
 });
 
 function HoverPreviewInner({
   movie,
   tvShow,
-  anchorRef,
+  anchorRect: externalRect,
+  onClose,
 }: HoverPreviewProps) {
   const item = (movie || tvShow)!;
   const isTV = !!tvShow;
@@ -64,17 +71,32 @@ function HoverPreviewInner({
   const removeTVFromWatchlist = useWatchlistStore((s) => s.removeTVShowFromWatchlist);
   const { openTrailerModal } = useUIStore();
 
+  // Build attributes for feedback buttons
+  const mediaType = isTV ? 'tv' as const : 'movie' as const;
+  const feedbackAttributes = extractAttributesFromMovie(
+    {
+      id: item.id,
+      title: isTV ? undefined : title,
+      name: isTV ? title : undefined,
+      original_language: item.original_language,
+      genre_ids: genreIds,
+      release_date: isTV ? undefined : date,
+      first_air_date: isTV ? date : undefined,
+      vote_average: rating,
+      popularity: item.popularity,
+    },
+    mediaType
+  );
+
   // Position calculation
   useEffect(() => {
-    const anchor = anchorRef.current;
-    if (!anchor) return;
+    if (!externalRect) return;
 
-    const rect = anchor.getBoundingClientRect();
     const previewWidth = 320;
     const previewHeight = 380;
 
-    let left = rect.left + rect.width / 2 - previewWidth / 2;
-    const top = rect.top + rect.height / 2 - previewHeight / 2;
+    let left = externalRect.left + externalRect.width / 2 - previewWidth / 2;
+    const top = externalRect.top + externalRect.height / 2 - previewHeight / 2;
 
     // Keep within viewport
     if (left < 12) left = 12;
@@ -83,7 +105,7 @@ function HoverPreviewInner({
     }
 
     setPos({ top: Math.max(12, top), left, width: previewWidth });
-  }, [anchorRef]);
+  }, [externalRect]);
 
   const handleWatchlist = useCallback(
     (e: React.MouseEvent) => {
@@ -194,18 +216,12 @@ function HoverPreviewInner({
                 <Bookmark className="w-3.5 h-3.5" />
               )}
             </button>
-            <button
-              className="p-1.5 rounded-full border border-dark-600 text-gray-400 hover:border-green-500 hover:text-green-400 transition-colors"
-              aria-label="Like"
-            >
-              <ThumbsUp className="w-3.5 h-3.5" />
-            </button>
-            <button
-              className="p-1.5 rounded-full border border-dark-600 text-gray-400 hover:border-red-500 hover:text-red-400 transition-colors"
-              aria-label="Dislike"
-            >
-              <ThumbsDown className="w-3.5 h-3.5" />
-            </button>
+            <FeedbackButtons
+              mediaId={item.id}
+              mediaType={mediaType}
+              attributes={feedbackAttributes}
+              size="sm"
+            />
           </div>
 
           {/* Genres */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Bookmark, BookmarkCheck, Play } from 'lucide-react';
@@ -8,9 +8,7 @@ import { TVShow } from '@/types/movie';
 import { getImageUrl, getYear, getTVGenreName } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge, Badge } from '@/components/ui';
-import { useWatchlistStore } from '@/store';
-import { HoverPreview } from './HoverPreview';
-import { MobileLongPressPreview } from './MobileLongPressPreview';
+import { useWatchlistStore, useUIStore } from '@/store';
 import { useLongPress } from '@/hooks/useLongPress';
 
 /**
@@ -37,26 +35,28 @@ export function TVShowCard({
   const removeTVShowFromWatchlist = useWatchlistStore((state) => state.removeTVShowFromWatchlist);
   // Subscribe to tvItems array so component re-renders when watchlist changes
   const inWatchlist = useWatchlistStore((state) => state.tvItems.some((s) => s.id === show.id));
+  const { openPreview, closePreview } = useUIStore();
 
-  // Hover preview state (desktop only)
-  const [showPreview, setShowPreview] = useState(false);
-  const [showMobilePreview, setShowMobilePreview] = useState(false);
+  // Hover preview state (desktop — dispatches to global singleton)
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const handleMouseEnter = useCallback(() => {
-    hoverTimer.current = setTimeout(() => setShowPreview(true), 400);
-  }, []);
+    hoverTimer.current = setTimeout(() => {
+      const rect = cardRef.current?.getBoundingClientRect();
+      if (rect) openPreview(show, true, { top: rect.top, left: rect.left, width: rect.width, height: rect.height }, 'hover');
+    }, 400);
+  }, [show, openPreview]);
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    setShowPreview(false);
-  }, []);
+    closePreview();
+  }, [closePreview]);
 
   // Mobile long-press
   const longPressHandlers = useLongPress({
     delay: 450,
-    onLongPress: () => setShowMobilePreview(true),
+    onLongPress: () => openPreview(show, true, { top: 0, left: 0, width: 0, height: 0 }, 'longpress'),
   });
 
   const handleWatchlistToggle = (e: React.MouseEvent) => {
@@ -168,18 +168,6 @@ export function TVShowCard({
           </div>
         </div>
       </Link>
-
-      {/* Desktop hover preview */}
-      {showPreview && (
-        <HoverPreview tvShow={show} anchorRef={cardRef} />
-      )}
-
-      {/* Mobile long-press preview */}
-      <MobileLongPressPreview
-        tvShow={show}
-        isOpen={showMobilePreview}
-        onClose={() => setShowMobilePreview(false)}
-      />
     </div>
   );
 }
