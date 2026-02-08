@@ -146,12 +146,12 @@ export default function RootLayout({
           description="AI-powered movie and TV show recommendation engine. Discover trending films, get personalized suggestions, and build your watchlist."
         />
 
-        {/* Google AdSense */}
+        {/* Google AdSense — beforeInteractive so it appears in SSR HTML for verification */}
         <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2161075687441902"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
         />
 
         <Script
