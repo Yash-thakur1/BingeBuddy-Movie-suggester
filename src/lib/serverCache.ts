@@ -33,6 +33,8 @@ import {
   getNowPlayingMovies,
   getUpcomingMovies,
   getMovieVideos,
+  getSimilarMovies,
+  getMovieRecommendations,
   getTrendingTVShows,
   getPopularTVShows,
   getTopRatedTVShows,
@@ -40,7 +42,10 @@ import {
   getOnTheAirTVShows,
   getTVShowVideos,
   discoverTVShows,
+  getSimilarTVShows,
+  getTVShowRecommendations,
 } from './tmdb';
+import { freshnessWeightedMovies, freshnessWeightedTVShows } from './freshnessRecommendations';
 
 // ─── Helpers ──────────────────────────────────────────────────
 
@@ -316,4 +321,66 @@ const _cachedOnTheAirTV = unstable_cache(
 
 export function getCachedOnTheAirTV(): Promise<TVShow[]> {
   return _cachedOnTheAirTV(getHourlyKey());
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SIMILARITY POOL CACHES (freshness-weighted)
+// ═══════════════════════════════════════════════════════════════
+
+// ─── Similar Movies (cached similarity pool + freshness weighting) ──
+
+export interface WeightedMovieRails {
+  recommended: Movie[];
+  similar: Movie[];
+}
+
+const _cachedSimilarMovies = unstable_cache(
+  async (movieId: number, _hourKey: string): Promise<WeightedMovieRails> => {
+    const [similar, recommended] = await Promise.all([
+      getSimilarMovies(movieId),
+      getMovieRecommendations(movieId),
+    ]);
+    return freshnessWeightedMovies(
+      similar.results,
+      recommended.results,
+      20,
+      movieId,
+    );
+  },
+  ['movie-similar-pool'],
+  { revalidate: 86400, tags: ['similarity-pools'] },
+);
+
+/** Cached freshness-weighted movie recommendations for a given movie. */
+export function getCachedSimilarMovies(movieId: number): Promise<WeightedMovieRails> {
+  return _cachedSimilarMovies(movieId, getHourlyKey());
+}
+
+// ─── Similar TV Shows (cached similarity pool + freshness weighting) ──
+
+export interface WeightedTVRails {
+  recommended: TVShow[];
+  similar: TVShow[];
+}
+
+const _cachedSimilarTVShows = unstable_cache(
+  async (tvId: number, _hourKey: string): Promise<WeightedTVRails> => {
+    const [similar, recommended] = await Promise.all([
+      getSimilarTVShows(tvId),
+      getTVShowRecommendations(tvId),
+    ]);
+    return freshnessWeightedTVShows(
+      similar.results,
+      recommended.results,
+      20,
+      tvId,
+    );
+  },
+  ['tv-similar-pool'],
+  { revalidate: 86400, tags: ['similarity-pools'] },
+);
+
+/** Cached freshness-weighted TV show recommendations for a given show. */
+export function getCachedSimilarTVShows(tvId: number): Promise<WeightedTVRails> {
+  return _cachedSimilarTVShows(tvId, getHourlyKey());
 }

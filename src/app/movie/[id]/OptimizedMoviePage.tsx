@@ -293,43 +293,58 @@ function RelatedContent({ movieId }: RelatedContentProps) {
       try {
         const { getMovieCache, updateMovieCache } = await import('@/lib/movieCache');
         const { getSimilarMovies, getMovieRecommendations } = await import('@/lib/tmdb/api');
+        const { freshnessWeightedMovies } = await import('@/lib/freshnessRecommendations');
         
         const cached = getMovieCache(movieId);
         
         // Use cached data if available
         if (cached.hasSimilar && cached.hasRecommendations && cached.data) {
-          setSimilar(cached.data.similar);
-          setRecommendations(cached.data.recommendations);
+          const weighted = freshnessWeightedMovies(
+            cached.data.similar?.results || [],
+            cached.data.recommendations?.results || [],
+            20,
+            movieId,
+          );
+          setSimilar({ results: weighted.similar });
+          setRecommendations({ results: weighted.recommended });
           setIsLoading(false);
           return;
         }
 
         // Fetch only what's missing
+        let simData = cached.data?.similar;
+        let recData = cached.data?.recommendations;
         const promises: Promise<void>[] = [];
         
         if (!cached.hasSimilar) {
           promises.push(
             getSimilarMovies(movieId).then(data => {
-              setSimilar(data);
+              simData = data;
               updateMovieCache(movieId, { similar: data });
             })
           );
-        } else if (cached.data?.similar) {
-          setSimilar(cached.data.similar);
         }
 
         if (!cached.hasRecommendations) {
           promises.push(
             getMovieRecommendations(movieId).then(data => {
-              setRecommendations(data);
+              recData = data;
               updateMovieCache(movieId, { recommendations: data });
             })
           );
-        } else if (cached.data?.recommendations) {
-          setRecommendations(cached.data.recommendations);
         }
 
         await Promise.all(promises);
+
+        // Apply freshness-weighted selection
+        const weighted = freshnessWeightedMovies(
+          simData?.results || [],
+          recData?.results || [],
+          20,
+          movieId,
+        );
+        setSimilar({ results: weighted.similar });
+        setRecommendations({ results: weighted.recommended });
       } catch (error) {
         console.error('Failed to load related content:', error);
       } finally {

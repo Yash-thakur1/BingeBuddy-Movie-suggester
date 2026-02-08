@@ -7,12 +7,11 @@ import {
   getTVShowCredits,
   getTVShowVideos,
   getTVShowWatchProviders,
-  getSimilarTVShows,
-  getTVShowRecommendations,
   getImageUrl,
   formatDate,
   getMainTrailer,
 } from '@/lib/tmdb';
+import { getCachedSimilarTVShows } from '@/lib/serverCache';
 import { RatingBadge, Badge, MovieDetailsSkeleton } from '@/components/ui';
 import { CastSection, CrewSection, TrailerPlayer, TVShowCarousel } from '@/components/movies';
 import { TVShowDetailsActions } from './TVShowDetailsActions';
@@ -295,29 +294,25 @@ async function TVShowContent({ id }: { id: number }) {
 
 async function SimilarTVShowsSection({ id }: { id: number }) {
   try {
-    const [similar, recommendations] = await Promise.all([
-      getSimilarTVShows(id),
-      getTVShowRecommendations(id),
-    ]);
+    const weighted = await getCachedSimilarTVShows(id);
 
-    const hasContent = recommendations.results.length > 0 || similar.results.length > 0;
-    
+    const hasContent = weighted.recommended.length > 0 || weighted.similar.length > 0;
     if (!hasContent) return null;
 
     return (
       <div className="container mx-auto px-4 md:px-8 pb-16">
-        {recommendations.results.length > 0 && (
+        {weighted.recommended.length > 0 && (
           <TVShowCarousel
             title="🎯 Recommended For You"
             description="Based on this show"
-            shows={recommendations.results}
+            shows={weighted.recommended}
           />
         )}
-        {similar.results.length > 0 && (
+        {weighted.similar.length > 0 && (
           <TVShowCarousel
             title="📺 Similar Shows"
             description="Shows like this one"
-            shows={similar.results}
+            shows={weighted.similar}
           />
         )}
       </div>
