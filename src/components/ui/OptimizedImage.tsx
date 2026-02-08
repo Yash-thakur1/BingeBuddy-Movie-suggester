@@ -5,7 +5,7 @@
  * - Low Quality Image Placeholders (LQIP)
  * - Fixed dimensions to prevent layout shift
  * - Network-aware quality selection
- * - Lazy loading with intersection observer
+ * - Native browser lazy loading (loading="lazy")
  * - Blur-up animation effect
  * - Priority loading for above-fold images
  */
