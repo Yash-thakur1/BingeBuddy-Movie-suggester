@@ -10,6 +10,8 @@ import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge, Badge } from '@/components/ui';
 import { useWatchlistStore } from '@/store';
 import { HoverPreview } from './HoverPreview';
+import { MobileLongPressPreview } from './MobileLongPressPreview';
+import { useLongPress } from '@/hooks/useLongPress';
 
 /**
  * TV Show Card Component
@@ -38,6 +40,7 @@ export function TVShowCard({
 
   // Hover preview state (desktop only)
   const [showPreview, setShowPreview] = useState(false);
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -49,6 +52,12 @@ export function TVShowCard({
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     setShowPreview(false);
   }, []);
+
+  // Mobile long-press
+  const longPressHandlers = useLongPress({
+    delay: 450,
+    onLongPress: () => setShowMobilePreview(true),
+  });
 
   const handleWatchlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -72,6 +81,7 @@ export function TVShowCard({
       className="group relative"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      {...longPressHandlers}
     >
       <Link href={`/tv/${show.id}`} className="block">
         <div
@@ -163,6 +173,13 @@ export function TVShowCard({
       {showPreview && (
         <HoverPreview tvShow={show} anchorRef={cardRef} />
       )}
+
+      {/* Mobile long-press preview */}
+      <MobileLongPressPreview
+        tvShow={show}
+        isOpen={showMobilePreview}
+        onClose={() => setShowMobilePreview(false)}
+      />
     </div>
   );
 }

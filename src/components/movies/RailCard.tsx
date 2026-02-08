@@ -8,6 +8,8 @@ import { getImageUrl, getYear, getGenreName } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge } from '@/components/ui';
 import { HoverPreview } from './HoverPreview';
+import { MobileLongPressPreview } from './MobileLongPressPreview';
+import { useLongPress } from '@/hooks/useLongPress';
 
 /**
  * Rail card with poster + hover preview for desktop.
@@ -41,6 +43,7 @@ export const RailCard = memo(function RailCard({
 
   const [loaded, setLoaded] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -53,12 +56,19 @@ export const RailCard = memo(function RailCard({
     setShowPreview(false);
   }, []);
 
+  // Mobile long-press
+  const longPressHandlers = useLongPress({
+    delay: 450,
+    onLongPress: () => setShowMobilePreview(true),
+  });
+
   return (
     <div
       ref={cardRef}
       className={cn('relative group/card', className)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      {...longPressHandlers}
     >
       <Link href={href} className="block" prefetch={false}>
         <div
@@ -129,6 +139,14 @@ export const RailCard = memo(function RailCard({
           anchorRef={cardRef}
         />
       )}
+
+      {/* Mobile long-press preview */}
+      <MobileLongPressPreview
+        movie={movie}
+        tvShow={tvShow}
+        isOpen={showMobilePreview}
+        onClose={() => setShowMobilePreview(false)}
+      />
     </div>
   );
 });

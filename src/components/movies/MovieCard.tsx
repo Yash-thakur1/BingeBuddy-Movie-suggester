@@ -11,6 +11,8 @@ import { RatingBadge, Badge } from '@/components/ui';
 import { useWatchlistStore } from '@/store';
 import { useMoviePrefetch } from '@/hooks';
 import { HoverPreview } from './HoverPreview';
+import { MobileLongPressPreview } from './MobileLongPressPreview';
+import { useLongPress } from '@/hooks/useLongPress';
 
 /**
  * Movie Card Component
@@ -42,6 +44,7 @@ export function MovieCard({
 
   // Hover preview state (desktop only)
   const [showPreview, setShowPreview] = useState(false);
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -54,6 +57,12 @@ export function MovieCard({
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     setShowPreview(false);
   }, []);
+
+  // Mobile long-press
+  const longPressHandlers = useLongPress({
+    delay: 450,
+    onLongPress: () => setShowMobilePreview(true),
+  });
 
   const handleWatchlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -78,6 +87,7 @@ export function MovieCard({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onFocus={prefetchProps.onFocus}
+      {...longPressHandlers}
     >
       <Link href={`/movie/${movie.id}`} className="block">
         <div
@@ -162,6 +172,13 @@ export function MovieCard({
       {showPreview && (
         <HoverPreview movie={movie} anchorRef={cardRef} />
       )}
+
+      {/* Mobile long-press preview */}
+      <MobileLongPressPreview
+        movie={movie}
+        isOpen={showMobilePreview}
+        onClose={() => setShowMobilePreview(false)}
+      />
     </div>
   );
 }

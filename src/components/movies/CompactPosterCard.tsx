@@ -9,6 +9,8 @@ import { getImageUrl } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge } from '@/components/ui';
 import { HoverPreview } from './HoverPreview';
+import { MobileLongPressPreview } from './MobileLongPressPreview';
+import { useLongPress } from '@/hooks/useLongPress';
 
 /**
  * Compact poster-only card for Netflix-style dense grids
@@ -66,9 +68,11 @@ function CompactPosterCardInner({
 }) {
   const [loaded, setLoaded] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // Desktop hover
   const handleMouseEnter = useCallback(() => {
     hoverTimer.current = setTimeout(() => setShowPreview(true), 400);
   }, []);
@@ -77,6 +81,12 @@ function CompactPosterCardInner({
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     setShowPreview(false);
   }, []);
+
+  // Mobile long-press
+  const longPressHandlers = useLongPress({
+    delay: 450,
+    onLongPress: () => setShowMobilePreview(true),
+  });
 
   const href = isTV ? `/tv/${item.id}` : `/movie/${item.id}`;
   const title = isTV ? (item as TVShow).name : (item as Movie).title;
@@ -145,6 +155,24 @@ function CompactPosterCardInner({
     </>
   );
 
+  const previewPortals = (
+    <>
+      {showPreview && (
+        <HoverPreview
+          movie={!isTV ? (item as Movie) : undefined}
+          tvShow={isTV ? (item as TVShow) : undefined}
+          anchorRef={cardRef}
+        />
+      )}
+      <MobileLongPressPreview
+        movie={!isTV ? (item as Movie) : undefined}
+        tvShow={isTV ? (item as TVShow) : undefined}
+        isOpen={showMobilePreview}
+        onClose={() => setShowMobilePreview(false)}
+      />
+    </>
+  );
+
   if (disableLink) {
     return (
       <div
@@ -152,15 +180,10 @@ function CompactPosterCardInner({
         className={cn('block group relative', className)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        {...longPressHandlers}
       >
         {cardContent}
-        {showPreview && (
-          <HoverPreview
-            movie={!isTV ? (item as Movie) : undefined}
-            tvShow={isTV ? (item as TVShow) : undefined}
-            anchorRef={cardRef}
-          />
-        )}
+        {previewPortals}
       </div>
     );
   }
@@ -171,17 +194,12 @@ function CompactPosterCardInner({
       className={cn('relative', className)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      {...longPressHandlers}
     >
       <Link href={href} className="block group" prefetch={false}>
         {cardContent}
       </Link>
-      {showPreview && (
-        <HoverPreview
-          movie={!isTV ? (item as Movie) : undefined}
-          tvShow={isTV ? (item as TVShow) : undefined}
-          anchorRef={cardRef}
-        />
-      )}
+      {previewPortals}
     </div>
   );
 }

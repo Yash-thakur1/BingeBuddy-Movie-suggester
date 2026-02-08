@@ -17,6 +17,7 @@ export { InfiniteMovieGrid, InfiniteMovieGridSkeleton } from './InfiniteMovieGri
 export { ContentRail, ContentRailSkeleton } from './ContentRail';
 export { RailCard } from './RailCard';
 export { HoverPreview } from './HoverPreview';
+export { MobileLongPressPreview } from './MobileLongPressPreview';
 
 // Infinite TV grid
 export { InfiniteTVGrid, InfiniteTVGridSkeleton } from './InfiniteTVGrid';
