@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import { HeroCarousel, HeroCarouselSkeleton } from '@/components/features';
 import { ContentRail, ContentRailSkeleton } from '@/components/movies';
-import { DashboardPrefetch } from '@/components/ui';
 import { FAQSchema } from '@/components/seo';
 import {
   getCachedMovieHero,
@@ -104,24 +103,12 @@ async function GenreRail({ genreId, title, description, href }: {
   );
 }
 
-/** Prefetch top trending movie detail routes after idle */
-async function PrefetchTrending() {
-  const movies = await getCachedTrendingMovies();
-  const hrefs = movies.slice(0, 8).map((m) => `/movie/${m.id}`);
-  return <DashboardPrefetch hrefs={hrefs} />;
-}
-
 export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Carousel */}
       <Suspense fallback={<HeroCarouselSkeleton />}>
         <HeroContent />
-      </Suspense>
-
-      {/* Prefetch top detail routes after initial render */}
-      <Suspense fallback={null}>
-        <PrefetchTrending />
       </Suspense>
 
       {/* Content Rails */}

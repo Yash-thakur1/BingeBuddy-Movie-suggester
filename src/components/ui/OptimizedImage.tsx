@@ -15,7 +15,6 @@
 import { useState, useRef, memo } from 'react';
 import Image, { ImageProps } from 'next/image';
 import { cn } from '@/lib/utils';
-import { useNetworkStore } from '@/lib/network';
 
 // ============================================
 // LQIP Generation
@@ -90,56 +89,19 @@ function getCachedPlaceholder(width: number, height: number, type: 'blur' | 'shi
 }
 
 // ============================================
-// Network-Aware Quality Selection
+// Image Quality
 // ============================================
 
 type ImageQuality = 'low' | 'medium' | 'high' | 'auto';
 
 function getOptimalQuality(priority: boolean): number {
-  if (typeof window === 'undefined') return 75;
-  
-  const { isSlowConnection, downlink } = useNetworkStore.getState();
-  
-  // Priority images always get high quality
-  if (priority) return 85;
-  
-  // Slow connection
-  if (isSlowConnection) return 50;
-  
-  // Adapt based on bandwidth
-  if (downlink < 1) return 50;
-  if (downlink < 2.5) return 60;
-  if (downlink < 5) return 70;
-  
-  return 75;
+  return priority ? 85 : 75;
 }
 
 function getOptimalSize(
   originalSize: string,
   priority: boolean
 ): string {
-  if (typeof window === 'undefined') return originalSize;
-  
-  const { isSlowConnection } = useNetworkStore.getState();
-  
-  // Priority images keep original size
-  if (priority) return originalSize;
-  
-  // Reduce size for slow connections
-  if (isSlowConnection) {
-    // Parse and reduce sizes
-    const sizes = originalSize.split(',').map((s) => {
-      const match = s.match(/(\d+)(vw|px)/);
-      if (match) {
-        const value = parseInt(match[1], 10);
-        const unit = match[2];
-        return `${Math.floor(value * 0.75)}${unit}`;
-      }
-      return s;
-    });
-    return sizes.join(',');
-  }
-  
   return originalSize;
 }
 
@@ -276,26 +238,20 @@ export const PosterImage = memo(function PosterImage({
   onLoad,
 }: PosterImageProps) {
   const config = posterSizes[size];
-  const { isSlowConnection } = useNetworkStore();
-  
-  // Use smaller size on slow connections
-  const actualSize = isSlowConnection && size !== 'sm'
-    ? posterSizes[size === 'xl' ? 'lg' : size === 'lg' ? 'md' : 'sm']
-    : config;
   
   const imageSrc = src
-    ? `https://image.tmdb.org/t/p/${actualSize.tmdbSize}${src}`
+    ? `https://image.tmdb.org/t/p/${config.tmdbSize}${src}`
     : '/placeholder-poster.svg';
   
   return (
     <OptimizedImage
       src={imageSrc}
       alt={alt}
-      width={actualSize.width}
-      height={actualSize.height}
+      width={config.width}
+      height={config.height}
       priority={priority}
       className={cn('rounded-lg', className)}
-      sizes={`(max-width: 640px) ${actualSize.width / 2}px, ${actualSize.width}px`}
+      sizes={`(max-width: 640px) ${config.width / 2}px, ${config.width}px`}
       onImageLoad={onLoad}
     />
   );
@@ -322,10 +278,7 @@ export const BackdropImage = memo(function BackdropImage({
   overlay = true,
   onLoad,
 }: BackdropImageProps) {
-  const { isSlowConnection } = useNetworkStore();
-  
-  // Use smaller size on slow connections
-  const tmdbSize = isSlowConnection ? 'w780' : 'w1280';
+  const tmdbSize = 'w1280';
   
   const imageSrc = src
     ? `https://image.tmdb.org/t/p/${tmdbSize}${src}`
@@ -341,7 +294,7 @@ export const BackdropImage = memo(function BackdropImage({
         priority={priority}
         className="w-full h-full object-cover"
         sizes="100vw"
-        forceQuality={isSlowConnection ? 60 : 75}
+        forceQuality={75}
         onImageLoad={onLoad}
       />
       

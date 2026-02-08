@@ -1,17 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { Inter, Outfit } from 'next/font/google';
-import dynamic from 'next/dynamic';
 import { Header, Footer } from '@/components/layout';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { WatchlistSyncProvider } from '@/components/providers/WatchlistSyncProvider';
-import { PerformanceProvider } from '@/components/providers/PerformanceProvider';
 import { LazyChat } from '@/components/chat';
-
-// Defer non-critical UI — not needed for first paint
-const NetworkStatusBanner = dynamic(() => import('@/components/ui/NetworkStatus').then(m => ({ default: m.NetworkStatusBanner })), { ssr: false });
-const TrailerModal = dynamic(() => import('@/components/movies/TrailerModal').then(m => ({ default: m.TrailerModal })), { ssr: false });
-const PreviewOverlay = dynamic(() => import('@/components/movies/PreviewOverlay').then(m => ({ default: m.PreviewOverlay })), { ssr: false });
+import { NetworkStatusBanner } from '@/components/ui/NetworkStatus';
+import { TrailerModal } from '@/components/movies/TrailerModal';
+import { PreviewOverlay } from '@/components/movies/PreviewOverlay';
 import { WebSiteSchema } from '@/components/seo';
 import './globals.css';
 
@@ -178,30 +174,28 @@ export default function RootLayout({
             style={{ display: 'none', visibility: 'hidden' }}
           />
         </noscript>
-        <PerformanceProvider>
-          <AuthProvider>
-            <WatchlistSyncProvider>
-              {/* Network Status Banner */}
-              <NetworkStatusBanner />
-              
-              {/* Header */}
-              <Header />
+        <AuthProvider>
+          <WatchlistSyncProvider>
+            {/* Network Status Banner */}
+            <NetworkStatusBanner />
+            
+            {/* Header */}
+            <Header />
 
-              {/* Main content */}
-              <main className="min-h-screen pt-16 md:pt-20">{children}</main>
+            {/* Main content */}
+            <main className="min-h-screen pt-16 md:pt-20">{children}</main>
 
-              {/* Footer */}
-              <Footer />
+            {/* Footer */}
+            <Footer />
 
-              {/* Global modals */}
-              <TrailerModal />
-              <PreviewOverlay />
-              
-              {/* AI Chat Assistant (lazy-loaded) */}
-              <LazyChat />
-            </WatchlistSyncProvider>
-          </AuthProvider>
-        </PerformanceProvider>
+            {/* Global modals */}
+            <TrailerModal />
+            <PreviewOverlay />
+            
+            {/* AI Chat Assistant (lazy-loaded) */}
+            <LazyChat />
+          </WatchlistSyncProvider>
+        </AuthProvider>
       </body>
     </html>
   );

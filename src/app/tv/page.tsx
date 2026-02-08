@@ -2,7 +2,6 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { HeroCarousel, HeroCarouselSkeleton } from '@/components/features';
 import { ContentRail, ContentRailSkeleton } from '@/components/movies';
-import { DashboardPrefetch } from '@/components/ui';
 import {
   getCachedTVHero,
   getCachedAiringToday,
@@ -129,24 +128,12 @@ async function TVGenreRail({ genreId, title, description, href }: {
   );
 }
 
-/** Prefetch top trending TV detail routes after idle */
-async function PrefetchTrendingTV() {
-  const tvShows = await getCachedTrendingTV();
-  const hrefs = tvShows.slice(0, 8).map((s) => `/tv/${s.id}`);
-  return <DashboardPrefetch hrefs={hrefs} />;
-}
-
 export default function TVHomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Carousel */}
       <Suspense fallback={<HeroCarouselSkeleton />}>
         <TVHeroContent />
-      </Suspense>
-
-      {/* Prefetch top detail routes after initial render */}
-      <Suspense fallback={null}>
-        <PrefetchTrendingTV />
       </Suspense>
 
       {/* Content Rails */}
