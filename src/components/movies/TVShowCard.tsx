@@ -103,6 +103,7 @@ export function TVShowCard({
             className="object-cover transition-transform duration-500 group-hover:scale-110"
             placeholder="blur"
             blurDataURL={getPlaceholderDataUrl()}
+            loading={priority ? 'eager' : 'lazy'}
             priority={priority}
           />
 

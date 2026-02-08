@@ -12,7 +12,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef, memo } from 'react';
+import { useState, useRef, memo } from 'react';
 import Image, { ImageProps } from 'next/image';
 import { cn } from '@/lib/utils';
 import { useNetworkStore } from '@/lib/network';
@@ -179,7 +179,6 @@ export const OptimizedImage = memo(function OptimizedImage({
   ...props
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isInView, setIsInView] = useState(priority);
   const imgRef = useRef<HTMLDivElement>(null);
   
   // Get numeric dimensions
@@ -196,31 +195,6 @@ export const OptimizedImage = memo(function OptimizedImage({
   
   // Get optimal sizes
   const optimizedSizes = sizes ? getOptimalSize(sizes, priority) : undefined;
-  
-  // Intersection observer for lazy loading
-  useEffect(() => {
-    if (priority || isInView) return;
-    
-    const element = imgRef.current;
-    if (!element) return;
-    
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      {
-        rootMargin: '200px',
-        threshold: 0,
-      }
-    );
-    
-    observer.observe(element);
-    
-    return () => observer.disconnect();
-  }, [priority, isInView]);
   
   const handleLoad = () => {
     setIsLoaded(true);
@@ -248,29 +222,27 @@ export const OptimizedImage = memo(function OptimizedImage({
         style={{ backgroundColor: bgColor }}
       />
       
-      {/* Only render image when in view (unless priority) */}
-      {(priority || isInView) && (
-        <Image
-          src={src}
-          alt={alt}
-          width={width}
-          height={height}
-          quality={quality}
-          priority={priority}
-          loading={priority ? 'eager' : 'lazy'}
-          placeholder="blur"
-          blurDataURL={placeholder}
-          sizes={optimizedSizes}
-          onLoad={handleLoad}
-          className={cn(
-            'absolute inset-0 w-full h-full object-cover',
-            blurUp && 'transition-all duration-500',
-            blurUp && !isLoaded && 'scale-110 blur-lg',
-            blurUp && isLoaded && 'scale-100 blur-0'
-          )}
-          {...props}
-        />
-      )}
+      {/* Always render <Image> — rely on native loading="lazy" */}
+      <Image
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        quality={quality}
+        priority={priority}
+        loading={priority ? 'eager' : 'lazy'}
+        placeholder="blur"
+        blurDataURL={placeholder}
+        sizes={optimizedSizes}
+        onLoad={handleLoad}
+        className={cn(
+          'absolute inset-0 w-full h-full object-cover',
+          blurUp && 'transition-all duration-500',
+          blurUp && !isLoaded && 'scale-110 blur-lg',
+          blurUp && isLoaded && 'scale-100 blur-0'
+        )}
+        {...props}
+      />
     </div>
   );
 });

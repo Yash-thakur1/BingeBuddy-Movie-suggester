@@ -1,8 +1,8 @@
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { HeroCarousel, HeroCarouselSkeleton } from '@/components/features';
-import { ContentRail, ContentRailSkeleton, VirtualizedRail, VirtualizedRailSkeleton } from '@/components/movies';
-import { LazyRail } from '@/components/ui';
+import { ContentRail, ContentRailSkeleton } from '@/components/movies';
+import { DashboardPrefetch } from '@/components/ui';
 import {
   getCachedTVHero,
   getCachedAiringToday,
@@ -120,7 +120,7 @@ async function TVGenreRail({ genreId, title, description, href }: {
 }) {
   const tvShows = await getCachedTVGenreRail(genreId);
   return (
-    <VirtualizedRail
+    <ContentRail
       title={title}
       description={description}
       tvShows={tvShows}
@@ -129,12 +129,24 @@ async function TVGenreRail({ genreId, title, description, href }: {
   );
 }
 
+/** Prefetch top trending TV detail routes after idle */
+async function PrefetchTrendingTV() {
+  const tvShows = await getCachedTrendingTV();
+  const hrefs = tvShows.slice(0, 8).map((s) => `/tv/${s.id}`);
+  return <DashboardPrefetch hrefs={hrefs} />;
+}
+
 export default function TVHomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Carousel */}
       <Suspense fallback={<HeroCarouselSkeleton />}>
         <TVHeroContent />
+      </Suspense>
+
+      {/* Prefetch top detail routes after initial render */}
+      <Suspense fallback={null}>
+        <PrefetchTrendingTV />
       </Suspense>
 
       {/* Content Rails */}
@@ -148,39 +160,31 @@ export default function TVHomePage() {
           <TrendingTVRail />
         </Suspense>
 
-        {/* Popular — lazy-loaded below fold */}
-        <LazyRail fallback={<ContentRailSkeleton />}>
-          <Suspense fallback={<ContentRailSkeleton />}>
-            <PopularTVRail />
-          </Suspense>
-        </LazyRail>
+        {/* Popular */}
+        <Suspense fallback={<ContentRailSkeleton />}>
+          <PopularTVRail />
+        </Suspense>
 
-        {/* Top Rated — lazy-loaded below fold */}
-        <LazyRail fallback={<ContentRailSkeleton />}>
-          <Suspense fallback={<ContentRailSkeleton />}>
-            <TopRatedTVRail />
-          </Suspense>
-        </LazyRail>
+        {/* Top Rated */}
+        <Suspense fallback={<ContentRailSkeleton />}>
+          <TopRatedTVRail />
+        </Suspense>
 
-        {/* On The Air — lazy-loaded below fold */}
-        <LazyRail fallback={<ContentRailSkeleton />}>
-          <Suspense fallback={<ContentRailSkeleton />}>
-            <OnTheAirRail />
-          </Suspense>
-        </LazyRail>
+        {/* On The Air */}
+        <Suspense fallback={<ContentRailSkeleton />}>
+          <OnTheAirRail />
+        </Suspense>
 
-        {/* Genre Rails — lazy-loaded + virtualised */}
+        {/* Genre Rails */}
         {TV_GENRE_RAILS.map((genre) => (
-          <LazyRail key={genre.id} fallback={<VirtualizedRailSkeleton />}>
-            <Suspense fallback={<VirtualizedRailSkeleton />}>
-              <TVGenreRail
-                genreId={genre.id}
-                title={genre.title}
-                description={genre.description}
-                href={genre.href}
-              />
-            </Suspense>
-          </LazyRail>
+          <Suspense key={genre.id} fallback={<ContentRailSkeleton />}>
+            <TVGenreRail
+              genreId={genre.id}
+              title={genre.title}
+              description={genre.description}
+              href={genre.href}
+            />
+          </Suspense>
         ))}
 
         {/* Internal Links */}

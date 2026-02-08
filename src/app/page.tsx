@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { HeroCarousel, HeroCarouselSkeleton } from '@/components/features';
-import { ContentRail, ContentRailSkeleton, VirtualizedRail, VirtualizedRailSkeleton } from '@/components/movies';
-import { LazyRail } from '@/components/ui';
+import { ContentRail, ContentRailSkeleton } from '@/components/movies';
+import { DashboardPrefetch } from '@/components/ui';
 import { FAQSchema } from '@/components/seo';
 import {
   getCachedMovieHero,
@@ -95,7 +95,7 @@ async function GenreRail({ genreId, title, description, href }: {
 }) {
   const movies = await getCachedMovieGenreRail(genreId);
   return (
-    <VirtualizedRail
+    <ContentRail
       title={title}
       description={description}
       movies={movies}
@@ -104,12 +104,24 @@ async function GenreRail({ genreId, title, description, href }: {
   );
 }
 
+/** Prefetch top trending movie detail routes after idle */
+async function PrefetchTrending() {
+  const movies = await getCachedTrendingMovies();
+  const hrefs = movies.slice(0, 8).map((m) => `/movie/${m.id}`);
+  return <DashboardPrefetch hrefs={hrefs} />;
+}
+
 export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Carousel */}
       <Suspense fallback={<HeroCarouselSkeleton />}>
         <HeroContent />
+      </Suspense>
+
+      {/* Prefetch top detail routes after initial render */}
+      <Suspense fallback={null}>
+        <PrefetchTrending />
       </Suspense>
 
       {/* Content Rails */}
@@ -125,32 +137,26 @@ export default function HomePage() {
           <TrendingRail />
         </Suspense>
 
-        {/* Popular — lazy-loaded below fold */}
-        <LazyRail fallback={<ContentRailSkeleton />}>
-          <Suspense fallback={<ContentRailSkeleton />}>
-            <PopularRail />
-          </Suspense>
-        </LazyRail>
+        {/* Popular */}
+        <Suspense fallback={<ContentRailSkeleton />}>
+          <PopularRail />
+        </Suspense>
 
-        {/* Top Rated — lazy-loaded below fold */}
-        <LazyRail fallback={<ContentRailSkeleton />}>
-          <Suspense fallback={<ContentRailSkeleton />}>
-            <TopRatedRail />
-          </Suspense>
-        </LazyRail>
+        {/* Top Rated */}
+        <Suspense fallback={<ContentRailSkeleton />}>
+          <TopRatedRail />
+        </Suspense>
 
-        {/* Genre Rails — lazy-loaded + virtualised */}
+        {/* Genre Rails */}
         {GENRE_RAILS.map((genre) => (
-          <LazyRail key={genre.id} fallback={<VirtualizedRailSkeleton />}>
-            <Suspense fallback={<VirtualizedRailSkeleton />}>
-              <GenreRail
-                genreId={genre.id}
-                title={genre.title}
-                description={genre.description}
-                href={genre.href}
-              />
-            </Suspense>
-          </LazyRail>
+          <Suspense key={genre.id} fallback={<ContentRailSkeleton />}>
+            <GenreRail
+              genreId={genre.id}
+              title={genre.title}
+              description={genre.description}
+              href={genre.href}
+            />
+          </Suspense>
         ))}
 
         {/* Internal Navigation Links */}

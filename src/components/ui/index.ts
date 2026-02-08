@@ -62,3 +62,6 @@ export {
 
 // Progressive loading
 export { LazyRail } from './LazyRail';
+
+// Post-render route prefetching
+export { DashboardPrefetch } from './DashboardPrefetch';
