@@ -7,9 +7,11 @@ import {
   getAiringTodayTVShows,
   getOnTheAirTVShows,
   getTVShowVideos,
+  discoverTVShows,
 } from '@/lib/tmdb';
 import { HeroCarousel, HeroCarouselSkeleton } from '@/components/features';
 import { ContentRail, ContentRailSkeleton } from '@/components/movies';
+import { dailyShuffleTVShows } from '@/lib/dailyShuffle';
 
 export const metadata: Metadata = {
   title: 'TV Shows - Trending, Popular & Top Rated Series',
@@ -31,6 +33,16 @@ export const revalidate = 3600;
 /**
  * TV Series Home Page — Streaming-platform dashboard with hero carousel and content rails.
  */
+
+// TV genre rail definitions
+const TV_GENRE_RAILS = [
+  { id: 18, title: '🎭 Drama Series', description: 'Compelling stories & complex characters', href: '/tv/discover?genre=18' },
+  { id: 35, title: '😂 Comedy Shows', description: 'Laughs on demand', href: '/tv/discover?genre=35' },
+  { id: 10765, title: '🚀 Sci-Fi & Fantasy', description: 'Worlds beyond imagination', href: '/tv/discover?genre=10765' },
+  { id: 80, title: '🔪 Crime', description: 'Whodunits & heists', href: '/tv/discover?genre=80' },
+  { id: 10759, title: '💥 Action & Adventure', description: 'Non-stop thrills', href: '/tv/discover?genre=10759' },
+  { id: 99, title: '📹 Documentaries', description: 'True stories that inspire', href: '/tv/discover?genre=99' },
+];
 
 /** Fetch hero items with trailers */
 async function TVHeroContent() {
@@ -116,6 +128,29 @@ async function OnTheAirRail() {
   );
 }
 
+async function TVGenreRail({ genreId, title, description, href }: {
+  genreId: number;
+  title: string;
+  description: string;
+  href: string;
+}) {
+  const [page1, page2] = await Promise.all([
+    discoverTVShows({ with_genres: String(genreId), sort_by: 'popularity.desc', page: 1 }),
+    discoverTVShows({ with_genres: String(genreId), sort_by: 'popularity.desc', page: 2 }),
+  ]);
+  const pool = [...page1.results, ...page2.results];
+  const shuffled = dailyShuffleTVShows(pool, genreId, 15);
+
+  return (
+    <ContentRail
+      title={title}
+      description={description}
+      tvShows={shuffled}
+      viewAllHref={href}
+    />
+  );
+}
+
 export default function TVHomePage() {
   return (
     <div className="min-h-screen">
@@ -146,6 +181,18 @@ export default function TVHomePage() {
         <Suspense fallback={<ContentRailSkeleton />}>
           <OnTheAirRail />
         </Suspense>
+
+        {/* Genre Rails (daily smart shuffle) */}
+        {TV_GENRE_RAILS.map((genre) => (
+          <Suspense key={genre.id} fallback={<ContentRailSkeleton />}>
+            <TVGenreRail
+              genreId={genre.id}
+              title={genre.title}
+              description={genre.description}
+              href={genre.href}
+            />
+          </Suspense>
+        ))}
 
         {/* Internal Links */}
         <section className="py-3 md:py-6">

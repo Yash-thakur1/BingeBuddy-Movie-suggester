@@ -11,6 +11,7 @@ import {
 import { HeroCarousel, HeroCarouselSkeleton } from '@/components/features';
 import { ContentRail, ContentRailSkeleton } from '@/components/movies';
 import { FAQSchema } from '@/components/seo';
+import { dailyShuffleMovies } from '@/lib/dailyShuffle';
 
 export const revalidate = 3600;
 
@@ -121,12 +122,19 @@ async function GenreRail({ genreId, title, description, href }: {
   description: string;
   href: string;
 }) {
-  const data = await getMoviesByGenre(genreId);
+  // Fetch 2 pages for a richer pool (40 items)
+  const [page1, page2] = await Promise.all([
+    getMoviesByGenre(genreId, 1),
+    getMoviesByGenre(genreId, 2),
+  ]);
+  const pool = [...page1.results, ...page2.results];
+  const shuffled = dailyShuffleMovies(pool, genreId, 15);
+
   return (
     <ContentRail
       title={title}
       description={description}
-      movies={data.results.slice(0, 15)}
+      movies={shuffled}
       viewAllHref={href}
     />
   );
