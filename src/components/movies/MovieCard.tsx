@@ -39,7 +39,7 @@ export function MovieCard({
   
   // Prefetch movie data on hover
   const prefetchProps = useMoviePrefetch(movie.id);
-  const { openPreview, closePreview } = useUIStore();
+  const { openPreview, scheduleClosePreview } = useUIStore();
 
   // Hover preview state (desktop — dispatches to global singleton)
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
@@ -55,8 +55,8 @@ export function MovieCard({
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    closePreview();
-  }, [closePreview]);
+    scheduleClosePreview();
+  }, [scheduleClosePreview]);
 
   // Mobile long-press
   const longPressHandlers = useLongPress({

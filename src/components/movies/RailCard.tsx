@@ -43,7 +43,7 @@ export const RailCard = memo(function RailCard({
   const [loaded, setLoaded] = useState(false);
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const { openPreview, closePreview } = useUIStore();
+  const { openPreview, scheduleClosePreview } = useUIStore();
 
   const handleMouseEnter = useCallback(() => {
     hoverTimer.current = setTimeout(() => {
@@ -54,8 +54,8 @@ export const RailCard = memo(function RailCard({
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    closePreview();
-  }, [closePreview]);
+    scheduleClosePreview();
+  }, [scheduleClosePreview]);
 
   // Mobile long-press
   const longPressHandlers = useLongPress({

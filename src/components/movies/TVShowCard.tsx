@@ -35,7 +35,7 @@ export function TVShowCard({
   const removeTVShowFromWatchlist = useWatchlistStore((state) => state.removeTVShowFromWatchlist);
   // Subscribe to tvItems array so component re-renders when watchlist changes
   const inWatchlist = useWatchlistStore((state) => state.tvItems.some((s) => s.id === show.id));
-  const { openPreview, closePreview } = useUIStore();
+  const { openPreview, scheduleClosePreview } = useUIStore();
 
   // Hover preview state (desktop — dispatches to global singleton)
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
@@ -50,8 +50,8 @@ export function TVShowCard({
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    closePreview();
-  }, [closePreview]);
+    scheduleClosePreview();
+  }, [scheduleClosePreview]);
 
   // Mobile long-press
   const longPressHandlers = useLongPress({

@@ -68,7 +68,7 @@ function CompactPosterCardInner({
   const [loaded, setLoaded] = useState(false);
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const { openPreview, closePreview } = useUIStore();
+  const { openPreview, scheduleClosePreview } = useUIStore();
 
   // Desktop hover
   const handleMouseEnter = useCallback(() => {
@@ -80,8 +80,8 @@ function CompactPosterCardInner({
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    closePreview();
-  }, [closePreview]);
+    scheduleClosePreview();
+  }, [scheduleClosePreview]);
 
   // Mobile long-press
   const longPressHandlers = useLongPress({

@@ -692,9 +692,13 @@ interface UIState {
   closeMobileMenu: () => void;
   openPreview: (item: Movie | TVShow, isTV: boolean, anchorRect: { top: number; left: number; width: number; height: number }, mode: 'hover' | 'longpress') => void;
   closePreview: () => void;
+  /** Schedule close with delay — allows mouse to move from card to popup */
+  scheduleClosePreview: () => void;
+  /** Cancel a pending scheduled close */
+  cancelClosePreview: () => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
+export const useUIStore = create<UIState>((set, get) => ({
   isSearchOpen: false,
   isTrailerModalOpen: false,
   currentTrailerKey: null,
@@ -717,10 +721,32 @@ export const useUIStore = create<UIState>((set) => ({
   toggleMobileMenu: () => set((state) => ({ isMobileMenuOpen: !state.isMobileMenuOpen })),
   closeMobileMenu: () => set({ isMobileMenuOpen: false }),
 
-  openPreview: (item, isTV, anchorRect, mode) =>
-    set({ previewItem: item, previewIsTV: isTV, previewAnchorRect: anchorRect, previewMode: mode }),
-  closePreview: () =>
-    set({ previewItem: null, previewIsTV: false, previewAnchorRect: null, previewMode: null }),
+  openPreview: (item, isTV, anchorRect, mode) => {
+    // Cancel any pending close when opening a new preview
+    const tid = (get() as any)._previewCloseTimer;
+    if (tid) clearTimeout(tid);
+    set({ previewItem: item, previewIsTV: isTV, previewAnchorRect: anchorRect, previewMode: mode, _previewCloseTimer: null } as any);
+  },
+  closePreview: () => {
+    const tid = (get() as any)._previewCloseTimer;
+    if (tid) clearTimeout(tid);
+    set({ previewItem: null, previewIsTV: false, previewAnchorRect: null, previewMode: null, _previewCloseTimer: null } as any);
+  },
+  scheduleClosePreview: () => {
+    const tid = (get() as any)._previewCloseTimer;
+    if (tid) clearTimeout(tid);
+    const newTid = setTimeout(() => {
+      set({ previewItem: null, previewIsTV: false, previewAnchorRect: null, previewMode: null, _previewCloseTimer: null } as any);
+    }, 150);
+    set({ _previewCloseTimer: newTid } as any);
+  },
+  cancelClosePreview: () => {
+    const tid = (get() as any)._previewCloseTimer;
+    if (tid) {
+      clearTimeout(tid);
+      set({ _previewCloseTimer: null } as any);
+    }
+  },
 }));
 
 // ============================================
