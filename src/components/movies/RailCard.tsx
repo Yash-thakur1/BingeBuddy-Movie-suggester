@@ -41,24 +41,29 @@ export const RailCard = memo(function RailCard({
     : (item as Movie).release_date;
 
   const [loaded, setLoaded] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showMobilePreview, setShowMobilePreview] = useState(false);
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const { openPreview, closePreview } = useUIStore();
 
   const handleMouseEnter = useCallback(() => {
-    hoverTimer.current = setTimeout(() => setShowPreview(true), 400);
-  }, []);
+    hoverTimer.current = setTimeout(() => {
+      const rect = cardRef.current?.getBoundingClientRect();
+      if (rect) openPreview(item, isTV, { top: rect.top, left: rect.left, width: rect.width, height: rect.height }, 'hover');
+    }, 400);
+  }, [item, isTV, openPreview]);
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    setShowPreview(false);
-  }, []);
+    closePreview();
+  }, [closePreview]);
 
   // Mobile long-press
   const longPressHandlers = useLongPress({
     delay: 450,
-    onLongPress: () => setShowMobilePreview(true),
+    onLongPress: () => {
+      const rect = cardRef.current?.getBoundingClientRect();
+      if (rect) openPreview(item, isTV, { top: rect.top, left: rect.left, width: rect.width, height: rect.height }, 'longpress');
+    },
   });
 
   return (

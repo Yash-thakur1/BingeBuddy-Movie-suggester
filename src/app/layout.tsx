@@ -3,6 +3,7 @@ import Script from 'next/script';
 import { Inter, Outfit } from 'next/font/google';
 import { Header, Footer } from '@/components/layout';
 import { TrailerModal } from '@/components/movies';
+import { PreviewOverlay } from '@/components/movies/PreviewOverlay';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { WatchlistSyncProvider } from '@/components/providers/WatchlistSyncProvider';
 import { PerformanceProvider } from '@/components/providers/PerformanceProvider';
@@ -182,6 +183,7 @@ export default function RootLayout({
 
               {/* Global modals */}
               <TrailerModal />
+              <PreviewOverlay />
               
               {/* AI Chat Assistant (lazy-loaded) */}
               <LazyChat />

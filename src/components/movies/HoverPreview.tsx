@@ -139,6 +139,7 @@ function HoverPreviewInner({
         width: pos.width,
       }}
       onMouseEnter={(e) => e.stopPropagation()}
+      onMouseLeave={() => onClose?.()}
     >
       <div className="bg-dark-900 rounded-xl overflow-hidden shadow-2xl shadow-black/60 border border-dark-700/60 ring-1 ring-white/5">
         {/* Backdrop / Poster header */}
