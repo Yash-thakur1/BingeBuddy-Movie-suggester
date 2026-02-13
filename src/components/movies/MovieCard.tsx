@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Bookmark, BookmarkCheck, Play } from 'lucide-react';
 import { Movie } from '@/types/movie';
-import { getImageUrl, getYear, getGenreName } from '@/lib/tmdb';
+import { getImageUrl, getYear, getGenreName, FALLBACK_POSTER_DATA_URL } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge, Badge } from '@/components/ui';
 import { useWatchlistStore, useUIStore } from '@/store';
@@ -100,7 +100,7 @@ export function MovieCard({
         >
           {/* Movie Poster */}
           <Image
-            src={imgError ? '/fallback-poster.png' : getImageUrl(
+            src={imgError ? FALLBACK_POSTER_DATA_URL : getImageUrl(
               variant === 'featured' ? movie.backdrop_path : movie.poster_path,
               variant === 'featured' ? 'w780' : 'w342'
             )}
@@ -189,7 +189,7 @@ export function MovieCardHorizontal({ movie }: { movie: Movie }) {
     >
       <div className="relative w-16 h-24 shrink-0 rounded-lg overflow-hidden">
         <Image
-          src={imgError ? '/fallback-poster.png' : getImageUrl(movie.poster_path, 'w185')}
+          src={imgError ? FALLBACK_POSTER_DATA_URL : getImageUrl(movie.poster_path, 'w185')}
           alt={movie.title || 'Movie poster'}
           fill
           className="object-cover"

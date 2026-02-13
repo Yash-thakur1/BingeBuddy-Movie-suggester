@@ -15,6 +15,7 @@
 import { useState, useRef, memo } from 'react';
 import Image, { ImageProps } from 'next/image';
 import { cn } from '@/lib/utils';
+import { FALLBACK_POSTER_DATA_URL } from '@/lib/tmdb';
 
 // ============================================
 // LQIP Generation
@@ -193,7 +194,7 @@ export const OptimizedImage = memo(function OptimizedImage({
       
       {/* Always render <Image> — rely on native loading="lazy" */}
       <Image
-        src={imgError ? '/fallback-poster.png' : src}
+        src={imgError ? FALLBACK_POSTER_DATA_URL : src}
         alt={alt}
         width={width}
         height={height}

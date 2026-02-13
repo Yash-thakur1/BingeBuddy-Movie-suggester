@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, memo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Movie, TVShow } from '@/types/movie';
-import { getImageUrl, getYear, getGenreName } from '@/lib/tmdb';
+import { getImageUrl, getYear, getGenreName, FALLBACK_POSTER_DATA_URL } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge } from '@/components/ui';
 import { useUIStore } from '@/store';

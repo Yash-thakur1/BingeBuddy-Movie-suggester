@@ -245,7 +245,7 @@ export const TV_SORT_OPTIONS = [
  * Fallback poster as data URL to avoid Vercel image optimization quota
  * 342x513 dark placeholder matching poster aspect ratio
  */
-const FALLBACK_POSTER_DATA_URL = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='342' height='513'%3E%3Crect width='342' height='513' fill='%231a1b1e'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='system-ui' font-size='18' fill='%23666' opacity='0.5'%3ENo Image%3C/text%3E%3C/svg%3E`;
+export const FALLBACK_POSTER_DATA_URL = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='342' height='513'%3E%3Crect width='342' height='513' fill='%231a1b1e'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='system-ui' font-size='18' fill='%23666' opacity='0.5'%3ENo Image%3C/text%3E%3C/svg%3E`;
 
 /**
  * Build full image URL from TMDB path

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Movie } from '@/types/movie';
 import { TVShow } from '@/types/movie';
-import { getImageUrl } from '@/lib/tmdb';
+import { getImageUrl, FALLBACK_POSTER_DATA_URL } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge } from '@/components/ui';
 import { useUIStore } from '@/store';

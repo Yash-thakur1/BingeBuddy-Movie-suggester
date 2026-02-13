@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Bookmark, BookmarkCheck, Play } from 'lucide-react';
 import { TVShow } from '@/types/movie';
-import { getImageUrl, getYear, getTVGenreName } from '@/lib/tmdb';
+import { getImageUrl, getYear, getTVGenreName, FALLBACK_POSTER_DATA_URL } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { RatingBadge, Badge } from '@/components/ui';
 import { useWatchlistStore, useUIStore } from '@/store';
@@ -94,7 +94,7 @@ export function TVShowCard({
         >
           {/* TV Show Poster */}
           <Image
-            src={imgError ? '/fallback-poster.png' : getImageUrl(
+            src={imgError ? FALLBACK_POSTER_DATA_URL : getImageUrl(
               variant === 'featured' ? show.backdrop_path : show.poster_path,
               variant === 'featured' ? 'w780' : 'w342'
             )}
@@ -188,7 +188,7 @@ export function TVShowCardHorizontal({ show }: { show: TVShow }) {
     >
       <div className="relative w-16 h-24 shrink-0 rounded-lg overflow-hidden">
         <Image
-          src={imgError ? '/fallback-poster.png' : getImageUrl(show.poster_path, 'w185')}
+          src={imgError ? FALLBACK_POSTER_DATA_URL : getImageUrl(show.poster_path, 'w185')}
           alt={show.name || 'TV show poster'}
           fill
           className="object-cover"

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import { Bookmark, BookmarkCheck, Play, Star, MonitorPlay, X } from 'lucide-react';
 import { Movie, TVShow } from '@/types/movie';
-import { getImageUrl, getYear, getGenreName } from '@/lib/tmdb';
+import { getImageUrl, getYear, getGenreName, FALLBACK_POSTER_DATA_URL } from '@/lib/tmdb';
 import { cn, getPlaceholderDataUrl } from '@/lib/utils';
 import { useWatchlistStore, useUIStore } from '@/store';
 import { FeedbackButtons } from '@/components/features/FeedbackButtons';

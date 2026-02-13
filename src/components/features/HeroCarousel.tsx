@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Play, Info, Bookmark, BookmarkCheck } from 'lucide-react';
 import { Movie, TVShow } from '@/types/movie';
-import { getImageUrl, getYear, getGenreName, getTVGenreName } from '@/lib/tmdb';
+import { getImageUrl, getYear, getGenreName, getTVGenreName, FALLBACK_POSTER_DATA_URL } from '@/lib/tmdb';
 import { Button, RatingBadge, Badge } from '@/components/ui';
 import { useWatchlistStore, useUIStore } from '@/store';
 import { cn } from '@/lib/utils';
