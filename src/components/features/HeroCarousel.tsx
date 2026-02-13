@@ -41,6 +41,7 @@ export const HeroCarousel = memo(function HeroCarousel({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const touchStartRef = useRef({ x: 0, y: 0 });
   const isSwipingRef = useRef(false);
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
   const total = items.length;
 
   const goTo = useCallback(
@@ -144,7 +145,7 @@ export const HeroCarousel = memo(function HeroCarousel({
             aria-hidden={!isActive}
           >
             <Image
-              src={getImageUrl(slideMedia.backdrop_path, 'original')}
+              src={imageErrors.has(index) ? '/fallback-poster.png' : getImageUrl(slideMedia.backdrop_path, 'w1280')}
               alt=""
               fill
               className="object-cover"
@@ -152,6 +153,7 @@ export const HeroCarousel = memo(function HeroCarousel({
               sizes="100vw"
               loading={index < 2 ? 'eager' : 'lazy'}
               fetchPriority={index === 0 ? 'high' : undefined}
+              onError={() => setImageErrors(prev => new Set(prev).add(index))}
             />
             {/* Gradients */}
             <div className="absolute inset-0 bg-gradient-to-r from-dark-950 via-dark-950/60 to-transparent" />

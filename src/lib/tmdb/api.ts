@@ -1,7 +1,7 @@
 /**
  * TMDB API Client
  * Handles all API requests to The Movie Database
- * Includes performance tracking and robust error handling
+ * Includes performance tracking, robust error handling, and request deduplication
  */
 
 import {
@@ -18,6 +18,7 @@ import {
   SortOption,
 } from '@/types/movie';
 import { TMDB_API_BASE, TMDB_API_KEY } from './config';
+import { dedupedRequest } from './requestDedup';
 
 // ============================================
 // API Request Utilities
@@ -65,9 +66,9 @@ function trackAPITiming(endpoint: string, duration: number, success: boolean): v
 }
 
 /**
- * Make authenticated request to TMDB API with retry logic
+ * Make authenticated request to TMDB API with retry logic and deduplication
  */
-async function tmdbFetch<T>(
+async function tmdbFetchInternal<T>(
   endpoint: string,
   params: Record<string, string | number | undefined> = {},
   options: FetchOptions = {},
@@ -174,6 +175,25 @@ async function tmdbFetch<T>(
     undefined,
     endpoint,
     true
+  );
+}
+
+/**
+ * Deduplicated TMDB fetch wrapper
+ * Prevents duplicate in-flight requests for the same endpoint
+ */
+async function tmdbFetch<T>(
+  endpoint: string,
+  params: Record<string, string | number | undefined> = {},
+  options: FetchOptions = {},
+  retries: number = 3
+): Promise<T> {
+  // Generate dedup key from endpoint and params
+  const dedupKey = `tmdb:${endpoint}:${JSON.stringify(params)}`;
+  
+  return dedupedRequest(
+    dedupKey,
+    () => tmdbFetchInternal<T>(endpoint, params, options, retries)
   );
 }
 

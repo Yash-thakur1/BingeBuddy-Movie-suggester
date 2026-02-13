@@ -3,22 +3,18 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import {
-  getTVShowDetails,
-  getTVShowCredits,
-  getTVShowVideos,
-  getTVShowWatchProviders,
   getImageUrl,
   formatDate,
   getMainTrailer,
 } from '@/lib/tmdb';
-import { getCachedSimilarTVShows } from '@/lib/serverCache';
+import { getCachedSimilarTVShows, getCachedTVShowDetailsData } from '@/lib/serverCache';
 import { RatingBadge, Badge, MovieDetailsSkeleton } from '@/components/ui';
 import { CastSection, CrewSection, TrailerPlayer, TVShowCarousel } from '@/components/movies';
 import { TVShowDetailsActions } from './TVShowDetailsActions';
 import { TVWatchProvidersSection } from './TVWatchProviders';
 import { TVWatchTracker } from './TVWatchTracker';
 import { TVSeriesSchema, BreadcrumbSchema } from '@/components/seo';
-import { Credits, Cast, Crew, WatchProviderCountry } from '@/types/movie';
+import { Crew } from '@/types/movie';
 
 const SITE_URL = 'https://www.bingebuddy.in';
 
@@ -29,7 +25,7 @@ interface TVShowPageProps {
 // Generate metadata for SEO
 export async function generateMetadata({ params }: TVShowPageProps): Promise<Metadata> {
   try {
-    const show = await getTVShowDetails(parseInt(params.id));
+    const { details: show } = await getCachedTVShowDetailsData(parseInt(params.id));
     const year = show.first_air_date ? new Date(show.first_air_date).getFullYear() : 'TBA';
     const title = `${show.name} (${year}) - TV Series`;
     const description = show.overview
@@ -73,25 +69,13 @@ function formatEpisodes(numEpisodes: number): string {
 }
 
 async function TVShowContent({ id }: { id: number }) {
-  const details = await getTVShowDetails(id);
+  // Fetch all data in parallel using cached function (single API call bundle)
+  const { details, credits, videos, providers } = await getCachedTVShowDetailsData(id);
   
-  let credits: Credits = { id, cast: [] as Cast[], crew: [] as Crew[] };
-  let trailer: string | null = null;
-  let watchProviders: WatchProviderCountry | null = null;
-  
-  try {
-    const [creditsResult, videos, providers] = await Promise.all([
-      getTVShowCredits(id),
-      getTVShowVideos(id),
-      getTVShowWatchProviders(id),
-    ]);
-    credits = creditsResult;
-    trailer = getMainTrailer(videos);
-    watchProviders = providers.results?.US || providers.results?.IN || 
-      Object.values(providers.results || {})[0] || null;
-  } catch (error) {
-    console.error('Error loading credits/videos/providers:', error);
-  }
+  const trailer = getMainTrailer(videos);
+  const results = providers.results || {};
+  const watchProviders = (results as any).US || (results as any).IN || 
+    Object.values(results)[0] || null;
 
   const creator = details.created_by?.[0];
   const genreNames = details.genres?.map((g: { name: string }) => g.name) || [];
@@ -132,7 +116,7 @@ async function TVShowContent({ id }: { id: number }) {
       {/* Hero Backdrop */}
       <div className="relative h-[50vh] min-h-[400px] w-full overflow-hidden">
         <Image
-          src={getImageUrl(details.backdrop_path, 'original')}
+          src={getImageUrl(details.backdrop_path, 'w1280')}
           alt={details.name}
           fill
           className="object-cover"

@@ -60,6 +60,7 @@ function MobileLongPressPreviewInner({
   const backdropPath = item.backdrop_path;
 
   const [closing, setClosing] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   // Watchlist state
   const addToWatchlist = useWatchlistStore((s) => s.addToWatchlist);
@@ -219,7 +220,7 @@ function MobileLongPressPreviewInner({
         {/* Backdrop / Poster header */}
         <div className="relative aspect-video bg-dark-800 overflow-hidden">
           <Image
-            src={getImageUrl(backdropPath || item.poster_path, backdropPath ? 'w780' : 'w500')}
+            src={imgError ? '/fallback-poster.png' : getImageUrl(backdropPath || item.poster_path, backdropPath ? 'w780' : 'w500')}
             alt={title}
             fill
             className="object-cover"
@@ -227,6 +228,7 @@ function MobileLongPressPreviewInner({
             loading="eager"
             placeholder="blur"
             blurDataURL={getPlaceholderDataUrl()}
+            onError={() => setImgError(true)}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/30 to-transparent" />
 

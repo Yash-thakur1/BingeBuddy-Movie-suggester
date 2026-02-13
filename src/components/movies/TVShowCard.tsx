@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Bookmark, BookmarkCheck, Play } from 'lucide-react';
@@ -31,6 +31,7 @@ export function TVShowCard({
   showGenres = true,
   variant = 'default',
 }: TVShowCardProps) {
+  const [imgError, setImgError] = useState(false);
   const addTVShowToWatchlist = useWatchlistStore((state) => state.addTVShowToWatchlist);
   const removeTVShowFromWatchlist = useWatchlistStore((state) => state.removeTVShowFromWatchlist);
   // Subscribe to tvItems array so component re-renders when watchlist changes
@@ -93,11 +94,11 @@ export function TVShowCard({
         >
           {/* TV Show Poster */}
           <Image
-            src={getImageUrl(
+            src={imgError ? '/fallback-poster.png' : getImageUrl(
               variant === 'featured' ? show.backdrop_path : show.poster_path,
-              variant === 'featured' ? 'w780' : 'w500'
+              variant === 'featured' ? 'w780' : 'w342'
             )}
-            alt={show.name}
+            alt={show.name || 'TV show poster'}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -105,6 +106,7 @@ export function TVShowCard({
             blurDataURL={getPlaceholderDataUrl()}
             loading={priority ? 'eager' : 'lazy'}
             priority={priority}
+            onError={() => setImgError(true)}
           />
 
           {/* Gradient overlay */}
@@ -177,6 +179,8 @@ export function TVShowCard({
  * Horizontal TV show card for search results and lists
  */
 export function TVShowCardHorizontal({ show }: { show: TVShow }) {
+  const [imgError, setImgError] = useState(false);
+  
   return (
     <Link
       href={`/tv/${show.id}`}
@@ -184,11 +188,13 @@ export function TVShowCardHorizontal({ show }: { show: TVShow }) {
     >
       <div className="relative w-16 h-24 shrink-0 rounded-lg overflow-hidden">
         <Image
-          src={getImageUrl(show.poster_path, 'w185')}
-          alt={show.name}
+          src={imgError ? '/fallback-poster.png' : getImageUrl(show.poster_path, 'w185')}
+          alt={show.name || 'TV show poster'}
           fill
           className="object-cover"
           sizes="64px"
+          loading="lazy"
+          onError={() => setImgError(true)}
         />
       </div>
       <div className="flex-1 min-w-0">

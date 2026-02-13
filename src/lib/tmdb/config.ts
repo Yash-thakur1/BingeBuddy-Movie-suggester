@@ -248,7 +248,7 @@ export function getImageUrl(
   path: string | null,
   size: string = 'w500'
 ): string {
-  if (!path) return '/images/placeholder-poster.svg';
+  if (!path) return '/fallback-poster.png';
   return `${TMDB_IMAGE_BASE}/${size}${path}`;
 }
 

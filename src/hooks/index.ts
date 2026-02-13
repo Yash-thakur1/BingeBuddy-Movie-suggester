@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Movie, PaginatedResponse } from '@/types/movie';
 import { searchMovies } from '@/lib/tmdb';
 import { debounce } from '@/lib/utils';
+import { queueMoviesForPrefetch } from '@/lib/movieCache';
 
 // ============================================
 // useDebounce Hook
@@ -328,7 +329,6 @@ export function useMovieViewportPrefetch(
     const observer = new IntersectionObserver(
       async (entries) => {
         if (entries[0].isIntersecting) {
-          const { queueMoviesForPrefetch } = await import('@/lib/movieCache');
           const newIds = movieIds.filter(id => !prefetchedRef.current.has(id));
           if (newIds.length > 0) {
             queueMoviesForPrefetch(newIds);

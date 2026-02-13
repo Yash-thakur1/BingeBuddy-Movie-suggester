@@ -23,7 +23,7 @@
  */
 
 import { unstable_cache } from 'next/cache';
-import type { Movie, TVShow } from '@/types/movie';
+import type { Movie, TVShow, MovieDetails, TVShowDetails, Credits, VideosResponse, WatchProvidersResponse } from '@/types/movie';
 import { dailyShuffleMovies, dailyShuffleTVShows } from './dailyShuffle';
 import {
   getMoviesByGenre,
@@ -44,6 +44,12 @@ import {
   discoverTVShows,
   getSimilarTVShows,
   getTVShowRecommendations,
+  getMovieDetails,
+  getMovieCredits,
+  getMovieWatchProviders,
+  getTVShowDetails,
+  getTVShowCredits,
+  getTVShowWatchProviders,
 } from './tmdb';
 import { freshnessWeightedMovies, freshnessWeightedTVShows } from './freshnessRecommendations';
 
@@ -383,4 +389,52 @@ const _cachedSimilarTVShows = unstable_cache(
 /** Cached freshness-weighted TV show recommendations for a given show. */
 export function getCachedSimilarTVShows(tvId: number): Promise<WeightedTVRails> {
   return _cachedSimilarTVShows(tvId, getHourlyKey());
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DETAIL PAGE CACHES (Movie & TV Show Details, Credits, etc.)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Cached movie details page data
+ * Fetches all essential data in parallel and caches for 1 hour
+ */
+const _cachedMovieDetailsData = unstable_cache(
+  async (movieId: number, _hourKey: string) => {
+    const [details, credits, videos, providers] = await Promise.all([
+      getMovieDetails(movieId),
+      getMovieCredits(movieId).catch(() => ({ id: movieId, cast: [], crew: [] })),
+      getMovieVideos(movieId).catch(() => ({ id: movieId, results: [] })),
+      getMovieWatchProviders(movieId).catch(() => ({ id: movieId, results: {} })),
+    ]);
+    return { details, credits, videos, providers };
+  },
+  ['movie-details-data'],
+  { revalidate: 3600, tags: ['movie-details'] },
+);
+
+export function getCachedMovieDetailsData(movieId: number) {
+  return _cachedMovieDetailsData(movieId, getHourlyKey());
+}
+
+/**
+ * Cached TV show details page data
+ * Fetches all essential data in parallel and caches for 1 hour
+ */
+const _cachedTVShowDetailsData = unstable_cache(
+  async (tvId: number, _hourKey: string) => {
+    const [details, credits, videos, providers] = await Promise.all([
+      getTVShowDetails(tvId),
+      getTVShowCredits(tvId).catch(() => ({ id: tvId, cast: [], crew: [] })),
+      getTVShowVideos(tvId).catch(() => ({ id: tvId, results: [] })),
+      getTVShowWatchProviders(tvId).catch(() => ({ id: tvId, results: {} })),
+    ]);
+    return { details, credits, videos, providers };
+  },
+  ['tv-details-data'],
+  { revalidate: 3600, tags: ['tv-details'] },
+);
+
+export function getCachedTVShowDetailsData(tvId: number) {
+  return _cachedTVShowDetailsData(tvId, getHourlyKey());
 }

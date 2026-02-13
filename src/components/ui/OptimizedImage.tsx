@@ -141,6 +141,7 @@ export const OptimizedImage = memo(function OptimizedImage({
   ...props
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
   
   // Get numeric dimensions
@@ -159,6 +160,12 @@ export const OptimizedImage = memo(function OptimizedImage({
   const optimizedSizes = sizes ? getOptimalSize(sizes, priority) : undefined;
   
   const handleLoad = () => {
+    setIsLoaded(true);
+    onImageLoad?.();
+  };
+  
+  const handleError = () => {
+    setImgError(true);
     setIsLoaded(true);
     onImageLoad?.();
   };
@@ -186,7 +193,7 @@ export const OptimizedImage = memo(function OptimizedImage({
       
       {/* Always render <Image> — rely on native loading="lazy" */}
       <Image
-        src={src}
+        src={imgError ? '/fallback-poster.png' : src}
         alt={alt}
         width={width}
         height={height}
@@ -197,6 +204,7 @@ export const OptimizedImage = memo(function OptimizedImage({
         blurDataURL={placeholder}
         sizes={optimizedSizes}
         onLoad={handleLoad}
+        onError={handleError}
         className={cn(
           'absolute inset-0 w-full h-full object-cover',
           blurUp && 'transition-all duration-500',

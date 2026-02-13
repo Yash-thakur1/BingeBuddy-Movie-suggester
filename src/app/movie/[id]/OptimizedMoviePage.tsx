@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense, lazy, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import { 
   getImageUrl, 
@@ -13,7 +13,6 @@ import {
   updateMovieCache, 
   CachedMovieData 
 } from '@/lib/movieCache';
-import { useNetworkStore } from '@/lib/network';
 import { trackMediaView } from '@/hooks/useWatchHistory';
 import { 
   RatingBadge, 
@@ -24,6 +23,12 @@ import {
   FadeIn 
 } from '@/components/ui';
 import { MovieDetailsActions } from './MovieDetailsActions';
+import { CastSection, CrewSection } from '@/components/movies/CastSection';
+import { TrailerPlayer } from '@/components/movies/TrailerModal';
+import { WatchProvidersSection } from '@/components/movies/WatchProviders';
+import { MovieCarousel } from '@/components/movies/MovieCarousel';
+import { getSimilarMovies, getMovieRecommendations } from '@/lib/tmdb/api';
+import { freshnessWeightedMovies } from '@/lib/freshnessRecommendations';
 import { cn } from '@/lib/utils';
 import { MovieDetails, Credits, Cast, Crew, WatchProviderCountry } from '@/types/movie';
 
@@ -39,23 +44,21 @@ interface EssentialContentProps {
 }
 
 function EssentialContent({ details, director, trailer, cacheTimestamp }: EssentialContentProps) {
-  const { isSlowConnection } = useNetworkStore();
-  
-  // Use lower quality images on slow connections
-  const backdropSize = isSlowConnection ? 'w780' : 'w1280';
+  const [backdropError, setBackdropError] = useState(false);
+  const [posterError, setPosterError] = useState(false);
   
   return (
     <>
       {/* Hero Backdrop */}
       <div className="relative h-[50vh] min-h-[400px] w-full overflow-hidden">
         <Image
-          src={getImageUrl(details.backdrop_path, backdropSize)}
+          src={getImageUrl(details.backdrop_path, 'w1280')}
           alt={details.title}
           fill
           className="object-cover animate-fade-in-up"
           priority
           sizes="100vw"
-          quality={isSlowConnection ? 60 : 75}
+          quality={75}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-dark-950 via-dark-950/50 to-dark-950/30" />
         <div className="absolute inset-0 bg-gradient-to-r from-dark-950 via-transparent to-transparent" />
@@ -163,13 +166,6 @@ function EssentialContent({ details, director, trailer, cacheTimestamp }: Essent
 // Phase 2: Deferred Content (Loads Progressively)
 // ============================================
 
-// Lazy load heavy components
-const CastSection = lazy(() => import('@/components/movies/CastSection').then(m => ({ default: m.CastSection })));
-const CrewSection = lazy(() => import('@/components/movies/CastSection').then(m => ({ default: m.CrewSection })));
-const TrailerPlayer = lazy(() => import('@/components/movies/TrailerModal').then(m => ({ default: m.TrailerPlayer })));
-const WatchProvidersSection = lazy(() => import('@/components/movies/WatchProviders').then(m => ({ default: m.WatchProvidersSection })));
-const MovieCarousel = lazy(() => import('@/components/movies/MovieCarousel').then(m => ({ default: m.MovieCarousel })));
-
 // Skeleton for deferred content
 function DeferredSkeleton() {
   return (
@@ -197,10 +193,6 @@ interface DeferredContentProps {
 
 function DeferredContent({ movieId, credits, trailer, providers, movieTitle }: DeferredContentProps) {
   const [isLoaded, setIsLoaded] = useState(false);
-  const { isOffline, isSlowConnection } = useNetworkStore();
-  
-  // Don't show heavy content (trailer) on slow connections or offline
-  const canShowTrailer = !isOffline && !isSlowConnection;
 
   useEffect(() => {
     // Small delay to ensure essential content renders first
@@ -219,36 +211,16 @@ function DeferredContent({ movieId, credits, trailer, providers, movieTitle }: D
       {/* Where to Watch */}
       {providers && (
         <FadeIn delay={0.1}>
-          <Suspense fallback={<DeferredSkeleton />}>
-            <WatchProvidersSection providers={providers} movieTitle={movieTitle} />
-          </Suspense>
+          <WatchProvidersSection providers={providers} movieTitle={movieTitle} />
         </FadeIn>
       )}
 
-      {/* Trailer - Only show on good connections */}
-      {trailer && canShowTrailer && (
+      {/* Trailer */}
+      {trailer && (
         <FadeIn delay={0.2}>
           <section className="mt-12">
             <h2 className="text-2xl font-bold text-white mb-4">🎬 Trailer</h2>
-            <Suspense fallback={<div className="aspect-video max-w-4xl bg-dark-800 rounded-xl skeleton-shimmer" />}>
-              <TrailerPlayer videoKey={trailer} title={movieTitle} className="max-w-4xl" />
-            </Suspense>
-          </section>
-        </FadeIn>
-      )}
-      
-      {/* Trailer unavailable message on slow connections */}
-      {trailer && !canShowTrailer && (
-        <FadeIn delay={0.2}>
-          <section className="mt-12">
-            <div className="max-w-4xl bg-dark-800/50 border border-dark-700 rounded-xl p-6">
-              <p className="text-gray-400 text-center">
-                {isOffline 
-                  ? '📴 Trailer unavailable while offline' 
-                  : '🐢 Trailer disabled on slow connection to save data'
-                }
-              </p>
-            </div>
+            <TrailerPlayer videoKey={trailer} title={movieTitle} className="max-w-4xl" />
           </section>
         </FadeIn>
       )}
@@ -256,18 +228,14 @@ function DeferredContent({ movieId, credits, trailer, providers, movieTitle }: D
       {/* Cast */}
       {credits && credits.cast.length > 0 && (
         <FadeIn delay={0.3}>
-          <Suspense fallback={<DeferredSkeleton />}>
-            <CastSection cast={credits.cast} />
-          </Suspense>
+          <CastSection cast={credits.cast} />
         </FadeIn>
       )}
 
       {/* Crew */}
       {credits && credits.crew.length > 0 && (
         <FadeIn delay={0.4}>
-          <Suspense fallback={<DeferredSkeleton />}>
-            <CrewSection crew={credits.crew} />
-          </Suspense>
+          <CrewSection crew={credits.crew} />
         </FadeIn>
       )}
     </div>
@@ -291,10 +259,6 @@ function RelatedContent({ movieId }: RelatedContentProps) {
     // Delay loading related content until after initial render
     const timer = setTimeout(async () => {
       try {
-        const { getMovieCache, updateMovieCache } = await import('@/lib/movieCache');
-        const { getSimilarMovies, getMovieRecommendations } = await import('@/lib/tmdb/api');
-        const { freshnessWeightedMovies } = await import('@/lib/freshnessRecommendations');
-        
         const cached = getMovieCache(movieId);
         
         // Use cached data if available
@@ -375,24 +339,22 @@ function RelatedContent({ movieId }: RelatedContentProps) {
 
   return (
     <div className="container mx-auto px-4 md:px-8 pb-16">
-      <Suspense fallback={null}>
-        {recommendations?.results?.length > 0 && (
-          <MovieCarousel
-            title="🎯 Recommended For You"
-            description="Based on this movie"
-            movies={recommendations.results}
-            prefetchOnScroll={true}
-          />
-        )}
-        {similar?.results?.length > 0 && (
-          <MovieCarousel
-            title="🎬 Similar Movies"
-            description="Movies like this one"
-            movies={similar.results}
-            prefetchOnScroll={true}
-          />
-        )}
-      </Suspense>
+      {recommendations?.results?.length > 0 && (
+        <MovieCarousel
+          title="🎯 Recommended For You"
+          description="Based on this movie"
+          movies={recommendations.results}
+          prefetchOnScroll={true}
+        />
+      )}
+      {similar?.results?.length > 0 && (
+        <MovieCarousel
+          title="🎬 Similar Movies"
+          description="Movies like this one"
+          movies={similar.results}
+          prefetchOnScroll={true}
+        />
+      )}
     </div>
   );
 }

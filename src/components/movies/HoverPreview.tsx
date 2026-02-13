@@ -58,6 +58,7 @@ function HoverPreviewInner({
 
   const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const [imgError, setImgError] = useState(false);
 
   // Watchlist state
   const addToWatchlist = useWatchlistStore((s) => s.addToWatchlist);
@@ -175,7 +176,7 @@ function HoverPreviewInner({
         {/* Backdrop / Poster header */}
         <div className="relative aspect-video bg-dark-800 overflow-hidden">
           <Image
-            src={getImageUrl(backdropPath || item.poster_path, backdropPath ? 'w780' : 'w500')}
+            src={imgError ? '/fallback-poster.png' : getImageUrl(backdropPath || item.poster_path, backdropPath ? 'w780' : 'w500')}
             alt={title}
             fill
             className="object-cover"
@@ -183,6 +184,7 @@ function HoverPreviewInner({
             loading="eager"
             placeholder="blur"
             blurDataURL={getPlaceholderDataUrl()}
+            onError={() => setImgError(true)}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-transparent to-transparent" />
 

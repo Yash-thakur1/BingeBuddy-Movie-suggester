@@ -2,17 +2,14 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import {
-  getMovieDetails,
-  getMovieCredits,
-  getMovieVideos,
-  getMovieWatchProviders,
   getImageUrl,
   getMainTrailer,
 } from '@/lib/tmdb';
+import { getCachedMovieDetailsData } from '@/lib/serverCache';
 import { MovieDetailsSkeleton } from '@/components/ui';
 import { OptimizedMoviePage } from './OptimizedMoviePage';
 import { MovieSchema, BreadcrumbSchema } from '@/components/seo';
-import { Credits, Cast, Crew, WatchProviderCountry } from '@/types/movie';
+import { Crew } from '@/types/movie';
 
 const SITE_URL = 'https://www.bingebuddy.in';
 
@@ -23,7 +20,7 @@ interface MoviePageProps {
 // Generate metadata for SEO
 export async function generateMetadata({ params }: MoviePageProps): Promise<Metadata> {
   try {
-    const movie = await getMovieDetails(parseInt(params.id));
+    const { details: movie } = await getCachedMovieDetailsData(parseInt(params.id));
     const year = movie.release_date ? new Date(movie.release_date).getFullYear() : 'TBA';
     const title = `${movie.title} (${year})`;
     const description = movie.overview
@@ -59,27 +56,13 @@ export async function generateMetadata({ params }: MoviePageProps): Promise<Meta
 }
 
 async function MovieContent({ id }: { id: number }) {
-  // Fetch essential data first (details only for fast initial render)
-  const details = await getMovieDetails(id);
+  // Fetch all data in parallel using cached function (single API call bundle)
+  const { details, credits, videos, providers } = await getCachedMovieDetailsData(id);
   
-  // Fetch secondary data with error handling
-  let credits: Credits = { id, cast: [] as Cast[], crew: [] as Crew[] };
-  let trailer: string | null = null;
-  let watchProviders: WatchProviderCountry | null = null;
-  
-  try {
-    const [creditsResult, videos, providers] = await Promise.all([
-      getMovieCredits(id),
-      getMovieVideos(id),
-      getMovieWatchProviders(id),
-    ]);
-    credits = creditsResult;
-    trailer = getMainTrailer(videos);
-    watchProviders = providers.results?.US || providers.results?.IN || 
-      Object.values(providers.results || {})[0] || null;
-  } catch (error) {
-    console.error('Error loading credits/videos/providers:', error);
-  }
+  const trailer = getMainTrailer(videos);
+  const results = providers.results || {};
+  const watchProviders = (results as any).US || (results as any).IN || 
+    Object.values(results)[0] || null;
 
   const director = credits.crew?.find((c: Crew) => c.job === 'Director');
   const genreNames = details.genres?.map((g: { name: string }) => g.name) || [];

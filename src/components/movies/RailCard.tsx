@@ -41,6 +41,7 @@ export const RailCard = memo(function RailCard({
     : (item as Movie).release_date;
 
   const [loaded, setLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const hoverTimer = useRef<NodeJS.Timeout | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const { openPreview, scheduleClosePreview } = useUIStore();
@@ -86,7 +87,7 @@ export const RailCard = memo(function RailCard({
         >
           {posterPath ? (
             <Image
-              src={getImageUrl(posterPath, 'w342')}
+              src={imgError ? '/fallback-poster.png' : getImageUrl(posterPath, 'w342')}
               alt={title}
               fill
               sizes="(max-width: 480px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 185px"
@@ -99,13 +100,17 @@ export const RailCard = memo(function RailCard({
               blurDataURL={getPlaceholderDataUrl()}
               priority={priority}
               onLoad={() => setLoaded(true)}
+              onError={() => { setImgError(true); setLoaded(true); }}
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-gray-600">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-              </svg>
-            </div>
+            <Image
+              src="/fallback-poster.png"
+              alt={title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 480px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 185px"
+              loading="lazy"
+            />
           )}
 
           {/* Gradient */}
