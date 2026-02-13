@@ -145,7 +145,7 @@ export const HeroCarousel = memo(function HeroCarousel({
             aria-hidden={!isActive}
           >
             <Image
-              src={imageErrors.has(index) ? '/fallback-poster.png' : getImageUrl(slideMedia.backdrop_path, 'w1280')}
+              src={imageErrors.has(index) ? FALLBACK_POSTER_DATA_URL : getImageUrl(slideMedia.backdrop_path, 'w1280')}
               alt=""
               fill
               className="object-cover"

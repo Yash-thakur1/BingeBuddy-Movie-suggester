@@ -176,7 +176,7 @@ function HoverPreviewInner({
         {/* Backdrop / Poster header */}
         <div className="relative aspect-video bg-dark-800 overflow-hidden">
           <Image
-            src={imgError ? '/fallback-poster.png' : getImageUrl(backdropPath || item.poster_path, backdropPath ? 'w780' : 'w500')}
+            src={imgError ? FALLBACK_POSTER_DATA_URL : getImageUrl(backdropPath || item.poster_path, backdropPath ? 'w780' : 'w500')}
             alt={title}
             fill
             className="object-cover"

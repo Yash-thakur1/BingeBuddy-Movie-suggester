@@ -87,7 +87,7 @@ export const RailCard = memo(function RailCard({
         >
           {posterPath ? (
             <Image
-              src={imgError ? '/fallback-poster.png' : getImageUrl(posterPath, 'w342')}
+              src={imgError ? FALLBACK_POSTER_DATA_URL : getImageUrl(posterPath, 'w342')}
               alt={title}
               fill
               sizes="(max-width: 480px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 185px"
